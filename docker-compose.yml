@@ -1,0 +1,136 @@
+name: verba
+
+x-backend-environment: &backend-environment
+  ENVIRONMENT: ${ENVIRONMENT:-development}
+  DATABASE_HOST: db
+  DATABASE_PORT: 5432
+  DATABASE_NAME: verba
+  DATABASE_USER: verba
+  DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-verba_local_only}
+  ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+  ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+  COOKIE_SECURE: ${COOKIE_SECURE:-false}
+  SESSION_DAYS: ${SESSION_DAYS:-30}
+  CONTENT_DATA_PATH: /srv/app/data/decks
+
+services:
+  db:
+    image: postgres:17.6-alpine3.22
+    environment:
+      POSTGRES_DB: verba
+      POSTGRES_USER: verba
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-verba_local_only}
+    volumes:
+      - verba_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U verba -d verba"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+    logging:
+      options: {max-size: "10m", max-file: "3"}
+    networks: [internal]
+
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment: *backend-environment
+    command: ["sh", "-c", "alembic upgrade head && python -m app.seed"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    pids_limit: 128
+    networks: [internal]
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment: *backend-environment
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    pids_limit: 256
+    logging:
+      options: {max-size: "10m", max-file: "3"}
+    networks: [internal]
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+      - /var/run
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    pids_limit: 128
+    logging:
+      options: {max-size: "10m", max-file: "3"}
+    networks: [internal]
+
+  backend-test:
+    profiles: [test]
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: test
+    environment:
+      DATABASE_URL: "sqlite+aiosqlite:///:memory:"
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+
+  frontend-test:
+    profiles: [test]
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: test
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+
+volumes:
+  verba_postgres:
+    name: verba_postgres
+
+networks:
+  internal:
+    driver: bridge

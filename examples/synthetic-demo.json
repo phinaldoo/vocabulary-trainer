@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "id": "synthetic-demo",
+  "version": 1,
+  "title": "Synthetic import demo",
+  "description": "Two generated nonce-word pairs for testing Verba imports.",
+  "front": {
+    "label": "Prompt",
+    "language": "zxx",
+    "matcher": "generic-v1"
+  },
+  "back": {
+    "label": "Answer",
+    "language": "zxx",
+    "matcher": "generic-v1"
+  },
+  "sections": [
+    {
+      "id": "generated-samples",
+      "title": "Generated samples",
+      "order": 1
+    }
+  ],
+  "cards": [
+    {
+      "id": "nuvexa-47",
+      "section": "generated-samples",
+      "order": 1,
+      "front": {
+        "text": "nuvexa-47",
+        "answers": []
+      },
+      "back": {
+        "text": "qarilo-82",
+        "answers": []
+      },
+      "metadata": {
+        "kind": "synthetic"
+      }
+    },
+    {
+      "id": "temoru-19",
+      "section": "generated-samples",
+      "order": 2,
+      "front": {
+        "text": "temoru-19",
+        "answers": []
+      },
+      "back": {
+        "text": "fyzana-63",
+        "answers": []
+      },
+      "metadata": {
+        "kind": "synthetic"
+      }
+    }
+  ]
+}

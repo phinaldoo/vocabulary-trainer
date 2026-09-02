@@ -1,0 +1,30 @@
+.DS_Store
+*.log
+*.pem
+*.tsbuildinfo
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Python
+backend/.venv/
+backend/.pytest_cache/
+backend/.ruff_cache/
+backend/**/__pycache__/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+
+# Local databases and operational artifacts
+.wrangler/
+backups/
+coverage/
+outputs/
+work/
+
+# Local/private vocabulary imports
+/imports/
