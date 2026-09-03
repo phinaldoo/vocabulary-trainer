@@ -87,7 +87,7 @@ export const messageRows = [
   ['auth.name', 'Name', '姓名', 'नाम', 'Nombre', 'Name'],
   ['auth.namePlaceholder', 'What should we call you?', '我们该怎么称呼你？', 'हम आपको किस नाम से बुलाएँ?', '¿Cómo quieres que te llamemos?', 'Wie dürfen wir dich nennen?'],
   ['auth.email', 'Email address', '电子邮箱', 'ईमेल पता', 'Correo electrónico', 'E-Mail-Adresse'],
-  ['auth.emailPlaceholder', 'you@example.com', 'you@example.com', 'you@example.com', 'tu@ejemplo.com', 'du@beispiel.de'],
+  ['auth.emailPlaceholder', 'you@example.com', 'you@example.com', 'you@example.com', 'tu@ejemplo.com', 'du@beispiel.example'],
   ['auth.password', 'Password', '密码', 'पासवर्ड', 'Contraseña', 'Passwort'],
   ['auth.newPasswordPlaceholder', 'At least 10 characters', '至少 10 个字符', 'कम से कम 10 अक्षर', 'Al menos 10 caracteres', 'Mindestens 10 Zeichen'],
   ['auth.passwordPlaceholder', 'Your password', '你的密码', 'आपका पासवर्ड', 'Tu contraseña', 'Dein Passwort'],
