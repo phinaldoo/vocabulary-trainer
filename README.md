@@ -1,13 +1,9 @@
-# Verba
+# Vocabulary Trainer
 
-Verba is a self-hosted vocabulary learning app with one catalogue managed by
+Vocabulary Trainer is a self-hosted vocabulary learning app with one catalogue managed by
 administrators and independent learning progress for every user. Decks can use
 any two languages or, more generally, any prompt/answer pair. No vocabulary is
 hardcoded into the application.
-
-![Verba dashboard populated with fictional sample learning data](docs/images/verba-dashboard.jpg)
-
-_Dashboard shown with fictional sample data._
 
 The interface supports English, Simplified Chinese, Hindi, Spanish, and German.
 Anonymous visitors use their browser's preferred supported language. Each
@@ -97,7 +93,7 @@ restart never overwrites later administrator edits.
 - `db`: PostgreSQL in a persistent Docker volume;
 - nginx serves the frontend and proxies `/api/*` under the same origin.
 
-Verba does not require an OpenAI API key or an external hosted service.
+Vocabulary Trainer does not require an OpenAI API key or an external hosted service.
 
 ## Development
 
@@ -155,7 +151,7 @@ make backup
 Restore only with explicit confirmation:
 
 ```bash
-make restore BACKUP_FILE=backups/verba-YYYYMMDD-HHMMSS.dump CONFIRM=restore
+make restore BACKUP_FILE=backups/vocabulary-trainer-YYYYMMDD-HHMMSS.dump CONFIRM=restore
 ```
 
 To remove the local database, including all accounts, catalogue content, and
@@ -165,7 +161,7 @@ progress:
 make clean-db CONFIRM=delete-all-local-data
 ```
 
-`docker compose down` alone keeps the named `verba_postgres` volume.
+`docker compose down` alone keeps the named `vocabulary_trainer_postgres` volume.
 
 ## Production checklist
 
@@ -181,6 +177,6 @@ make clean-db CONFIRM=delete-all-local-data
 
 ## License
 
-Verba's source code is available under the [MIT License](LICENSE). See
+Vocabulary Trainer's source code is available under the [MIT License](LICENSE). See
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for included third-party
 notices.

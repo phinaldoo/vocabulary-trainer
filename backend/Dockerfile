@@ -33,17 +33,17 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH"
 
-RUN groupadd --system --gid 10001 verba \
-    && useradd --system --uid 10001 --gid verba --home-dir /srv/app --shell /usr/sbin/nologin verba
+RUN groupadd --system --gid 10001 vocabulary_trainer \
+    && useradd --system --uid 10001 --gid vocabulary_trainer --home-dir /srv/app --shell /usr/sbin/nologin vocabulary_trainer
 
 WORKDIR /srv/app
 COPY --from=builder /opt/venv /opt/venv
-COPY --chown=verba:verba backend/app ./app
-COPY --chown=verba:verba backend/alembic ./alembic
-COPY --chown=verba:verba backend/alembic.ini ./alembic.ini
-COPY --chown=verba:verba data/decks ./data/decks
+COPY --chown=vocabulary_trainer:vocabulary_trainer backend/app ./app
+COPY --chown=vocabulary_trainer:vocabulary_trainer backend/alembic ./alembic
+COPY --chown=vocabulary_trainer:vocabulary_trainer backend/alembic.ini ./alembic.ini
+COPY --chown=vocabulary_trainer:vocabulary_trainer data/decks ./data/decks
 
-USER verba
+USER vocabulary_trainer
 EXPOSE 8000
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

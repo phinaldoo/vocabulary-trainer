@@ -62,7 +62,7 @@ function cookie(name: string) {
 let csrfPromise: Promise<string> | null = null;
 
 export async function ensureCsrf(force = false): Promise<string> {
-  const existing = cookie('verba_csrf');
+  const existing = cookie('vocabulary_trainer_csrf');
   if (existing && !force) return decodeURIComponent(existing);
   if (!csrfPromise || force) {
     csrfPromise = fetch('/api/v1/auth/csrf', { credentials: 'include' })
@@ -105,7 +105,9 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
       response.status,
       code,
     );
-    if (response.status === 401) window.dispatchEvent(new Event('verba:unauthorized'));
+    if (response.status === 401) {
+      window.dispatchEvent(new Event('vocabulary-trainer:unauthorized'));
+    }
     throw error;
   }
   if (response.status === 204) return undefined as T;

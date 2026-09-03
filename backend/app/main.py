@@ -34,7 +34,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         await engine.dispose()
 
     app = FastAPI(
-        title="Verba API",
+        title=config.app_name,
         version="2.0.0",
         docs_url="/api/docs" if config.environment != "production" else None,
         redoc_url=None,

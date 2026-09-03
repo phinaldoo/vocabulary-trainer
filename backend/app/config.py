@@ -5,7 +5,7 @@ from urllib.parse import quote
 from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-LOCAL_DATABASE_PASSWORD = "verba_local_only"
+LOCAL_DATABASE_PASSWORD = "vocabulary_trainer_local_only"
 EXAMPLE_DATABASE_PASSWORD = "replace-with-a-long-random-password"
 MIN_PRODUCTION_DATABASE_PASSWORD_LENGTH = 16
 
@@ -18,14 +18,14 @@ class Settings(BaseSettings):
         enable_decoding=False,
     )
 
-    app_name: str = "Verba API"
+    app_name: str = "Vocabulary Trainer API"
     environment: str = "development"
     api_prefix: str = "/api/v1"
     database_url: str = ""
     database_host: str = "localhost"
     database_port: int = 5432
-    database_name: str = "verba"
-    database_user: str = "verba"
+    database_name: str = "vocabulary_trainer"
+    database_user: str = "vocabulary_trainer"
     database_password: str = LOCAL_DATABASE_PASSWORD
     allowed_origins: list[str] = Field(
         default_factory=lambda: ["http://localhost:3000", "http://localhost:5173"]

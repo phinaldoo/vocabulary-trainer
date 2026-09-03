@@ -1,12 +1,12 @@
-name: verba
+name: vocabulary-trainer
 
 x-backend-environment: &backend-environment
   ENVIRONMENT: ${ENVIRONMENT:-development}
   DATABASE_HOST: db
   DATABASE_PORT: 5432
-  DATABASE_NAME: verba
-  DATABASE_USER: verba
-  DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-verba_local_only}
+  DATABASE_NAME: vocabulary_trainer
+  DATABASE_USER: vocabulary_trainer
+  DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-vocabulary_trainer_local_only}
   ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
   ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
   COOKIE_SECURE: ${COOKIE_SECURE:-false}
@@ -17,13 +17,13 @@ services:
   db:
     image: postgres:17.6-alpine3.22
     environment:
-      POSTGRES_DB: verba
-      POSTGRES_USER: verba
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-verba_local_only}
+      POSTGRES_DB: vocabulary_trainer
+      POSTGRES_USER: vocabulary_trainer
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vocabulary_trainer_local_only}
     volumes:
-      - verba_postgres:/var/lib/postgresql/data
+      - vocabulary_trainer_postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U verba -d verba"]
+      test: ["CMD-SHELL", "pg_isready -U vocabulary_trainer -d vocabulary_trainer"]
       interval: 3s
       timeout: 3s
       retries: 20
@@ -128,8 +128,8 @@ services:
     cap_drop: [ALL]
 
 volumes:
-  verba_postgres:
-    name: verba_postgres
+  vocabulary_trainer_postgres:
+    name: vocabulary_trainer_postgres
 
 networks:
   internal:

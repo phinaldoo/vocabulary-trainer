@@ -51,10 +51,10 @@ a { color: inherit; text-decoration: none; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid #141414; outline-offset: 2px; }
 button:disabled { cursor: not-allowed; opacity: .4; }
 
-.brand { display: inline-flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 650; letter-spacing: -.03em; }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 650; letter-spacing: -.03em; white-space: nowrap; }
 .brand-mark, .mini-mark { display: grid; place-items: center; background: var(--ink); color: white; font-family: Georgia, serif; }
-.brand-mark { width: 30px; height: 30px; border-radius: 8px; font-size: 15px; }
-.brand-mark.compact { width: 28px; height: 28px; border-radius: 7px; font-size: 14px; }
+.brand-mark { width: 30px; height: 30px; border-radius: 8px; font-size: 11px; }
+.brand-mark.compact { width: 28px; height: 28px; border-radius: 7px; font-size: 10px; }
 
 .button { min-height: 44px; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 0 18px; display: inline-flex; align-items: center; justify-content: center; gap: 9px; cursor: pointer; font-size: 14px; font-weight: 550; transition: background 140ms ease, border-color 140ms ease, opacity 140ms ease; }
 .button svg { width: 16px; height: 16px; }
@@ -104,7 +104,7 @@ button:disabled { cursor: not-allowed; opacity: .4; }
 .preview-window { position: relative; z-index: 1; border: 1px solid var(--border); border-radius: 16px; background: white; box-shadow: 0 1px 3px rgb(0 0 0 / 4%); padding: 20px; }
 .preview-top { height: 40px; display: flex; align-items: center; gap: 10px; color: var(--ink); font-size: 13px; font-weight: 550; }
 .preview-top small { margin-left: auto; color: var(--muted); }
-.mini-mark { width: 26px; height: 26px; border-radius: 7px; }
+.mini-mark { width: 26px; height: 26px; border-radius: 7px; font-size: 10px; }
 .progress-track { height: 4px; overflow: hidden; border-radius: 999px; background: #eeeeeb; }
 .progress-track > span { display: block; height: 100%; border-radius: inherit; background: var(--ink); }
 .preview-card { min-height: 280px; margin: 18px 0; border: 1px solid var(--border); border-radius: var(--radius); padding: 52px 36px 30px; text-align: center; background: white; }
@@ -133,7 +133,7 @@ button:disabled { cursor: not-allowed; opacity: .4; }
 /* Authentication */
 .auth-shell { min-height: 100svh; display: grid; grid-template-columns: minmax(360px, .8fr) minmax(520px, 1.2fr); background: white; }
 .auth-aside { min-height: 100svh; padding: 40px clamp(32px, 5vw, 72px); display: flex; flex-direction: column; justify-content: space-between; color: white; background: #141414; overflow: hidden; position: relative; }
-.auth-aside::after { content: "V"; position: absolute; right: -40px; bottom: -90px; color: rgb(255 255 255 / 3%); font: 500 380px/1 Georgia, serif; }
+.auth-aside::after { content: "VT"; position: absolute; right: -40px; bottom: -70px; color: rgb(255 255 255 / 3%); font: 500 280px/1 Georgia, serif; }
 .auth-aside .brand { color: white; }
 .auth-aside .brand-mark { background: white; color: #141414; }
 .auth-aside > div { position: relative; z-index: 1; }

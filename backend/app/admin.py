@@ -18,7 +18,9 @@ async def set_role(email: str, role: str) -> None:
         async with session_factory() as db:
             user = await db.scalar(select(User).where(User.email == normalize_email(email)))
             if not user:
-                raise RuntimeError("Konto nicht gefunden. Registriere es zuerst in Verba.")
+                raise RuntimeError(
+                    "Konto nicht gefunden. Registriere es zuerst in Vocabulary Trainer."
+                )
             user.role = role
             await db.commit()
             print(f"{user.email}: Rolle auf {role} gesetzt.")
@@ -27,7 +29,9 @@ async def set_role(email: str, role: str) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Verba-Administratorrollen verwalten")
+    parser = argparse.ArgumentParser(
+        description="Administratorrollen für Vocabulary Trainer verwalten"
+    )
     parser.add_argument("action", choices=["promote", "demote"])
     parser.add_argument("email")
     args = parser.parse_args()

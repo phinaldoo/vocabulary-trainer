@@ -27,7 +27,7 @@ async def _register(client: AsyncClient, email: str) -> dict[str, object]:
 
 
 def _mutation_headers(client: AsyncClient) -> dict[str, str]:
-    token = client.cookies.get("verba_csrf")
+    token = client.cookies.get("vocabulary_trainer_csrf")
     assert token
     return {"X-CSRF-Token": token, "Origin": "http://testserver"}
 

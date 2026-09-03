@@ -33,7 +33,7 @@ export function LandingPage() {
         </div>
         <div className="product-stage" aria-label={t('landing.previewLabel')}>
           <div className="preview-window">
-            <div className="preview-top"><span className="mini-mark">V</span><span>{t('landing.basics')}</span><small>{t('landing.previewProgress', { current: 4, total: 12 })}</small></div>
+            <div className="preview-top"><span className="mini-mark">VT</span><span>{t('landing.basics')}</span><small>{t('landing.previewProgress', { current: 4, total: 12 })}</small></div>
             <div className="progress-track"><span style={{ width: '34%' }} /></div>
             <div className="preview-card">
               <p>{t('landing.question')}</p>

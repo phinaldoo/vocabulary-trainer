@@ -2,7 +2,7 @@
 
 BACKUP_DIR ?= backups
 BACKUP_TIMESTAMP := $(shell date +%Y%m%d-%H%M%S)
-BACKUP_FILE ?= $(BACKUP_DIR)/verba-$(BACKUP_TIMESTAMP).dump
+BACKUP_FILE ?= $(BACKUP_DIR)/vocabulary-trainer-$(BACKUP_TIMESTAMP).dump
 
 up:
 	docker compose up --build
@@ -30,7 +30,7 @@ clean-db:
 
 backup:
 	mkdir -p "$(dir $(BACKUP_FILE))"
-	docker compose exec -T db pg_dump -U verba -d verba -Fc > "$(BACKUP_FILE).partial"
+	docker compose exec -T db pg_dump -U vocabulary_trainer -d vocabulary_trainer -Fc > "$(BACKUP_FILE).partial"
 	docker compose exec -T db pg_restore --list < "$(BACKUP_FILE).partial" > /dev/null
 	mv "$(BACKUP_FILE).partial" "$(BACKUP_FILE)"
 	@echo "Backup geprüft und gespeichert: $(BACKUP_FILE)"
@@ -42,5 +42,5 @@ restore:
 	docker compose up -d db
 	docker compose stop backend frontend
 	docker compose exec -T db pg_restore --list < "$(BACKUP_FILE)" > /dev/null
-	docker compose exec -T db pg_restore --clean --if-exists --no-owner --exit-on-error --single-transaction -U verba -d verba < "$(BACKUP_FILE)"
+	docker compose exec -T db pg_restore --clean --if-exists --no-owner --exit-on-error --single-transaction -U vocabulary_trainer -d vocabulary_trainer < "$(BACKUP_FILE)"
 	docker compose up -d backend frontend

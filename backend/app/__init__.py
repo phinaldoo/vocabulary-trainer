@@ -1,1 +1,1 @@
-"""Verba API package."""
+"""Vocabulary Trainer API package."""

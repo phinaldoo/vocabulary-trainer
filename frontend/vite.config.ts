@@ -2,7 +2,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  cacheDir: '/tmp/verba-vite-cache',
+  cacheDir: '/tmp/vocabulary-trainer-vite-cache',
   plugins: [react()],
   server: {
     port: 3000,

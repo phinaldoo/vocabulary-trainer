@@ -55,8 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setLanguage(detectBrowserLanguage());
     };
-    window.addEventListener('verba:unauthorized', clear);
-    return () => window.removeEventListener('verba:unauthorized', clear);
+    window.addEventListener('vocabulary-trainer:unauthorized', clear);
+    return () => window.removeEventListener('vocabulary-trainer:unauthorized', clear);
   }, [setLanguage]);
 
   const value = useMemo<AuthContextValue>(

@@ -45,12 +45,12 @@ def hash_token(token: str) -> str:
 
 def session_cookie_name(settings: Settings) -> str:
     if settings.cookie_secure and not settings.cookie_domain:
-        return "__Host-verba_session"
-    return "verba_session"
+        return "__Host-vocabulary_trainer_session"
+    return "vocabulary_trainer_session"
 
 
 def csrf_cookie_name(settings: Settings) -> str:
-    return "verba_csrf"
+    return "vocabulary_trainer_csrf"
 
 
 def set_csrf_cookie(response: Response, settings: Settings, token: str) -> None:

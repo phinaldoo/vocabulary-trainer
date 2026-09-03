@@ -8,13 +8,14 @@ def test_database_url_percent_encodes_credentials() -> None:
     settings = Settings(
         _env_file=None,
         database_url="",
-        database_user="verba@example",
+        database_user="vocabulary_trainer@example",
         database_password="p@ss:/#%",
         database_name="latein kurs",
     )
 
     assert settings.database_url == (
-        "postgresql+asyncpg://verba%40example:p%40ss%3A%2F%23%25@localhost:5432/latein%20kurs"
+        "postgresql+asyncpg://vocabulary_trainer%40example:p%40ss%3A%2F%23%25"
+        "@localhost:5432/latein%20kurs"
     )
 
 
@@ -33,8 +34,8 @@ def test_production_settings_fail_closed(overrides: dict[str, object]) -> None:
         "database_password": "a-long-production-password",
         "environment": "production",
         "cookie_secure": True,
-        "allowed_origins": ["https://verba.example"],
-        "allowed_hosts": ["verba.example"],
+        "allowed_origins": ["https://vocabulary-trainer.example"],
+        "allowed_hosts": ["vocabulary-trainer.example"],
     }
     values.update(overrides)
 
@@ -49,17 +50,17 @@ def test_production_settings_accept_secure_component_configuration() -> None:
         database_password="a-long-production-password",
         environment="production",
         cookie_secure=True,
-        allowed_origins=["https://verba.example"],
-        allowed_hosts=["verba.example"],
+        allowed_origins=["https://vocabulary-trainer.example"],
+        allowed_hosts=["vocabulary-trainer.example"],
     )
 
     assert settings.cookie_secure is True
-    assert settings.database_url.startswith("postgresql+asyncpg://verba:")
+    assert settings.database_url.startswith("postgresql+asyncpg://vocabulary_trainer:")
 
 
 @pytest.mark.parametrize(
     "database_password",
-    ["verba_local_only", "replace-with-a-long-random-password", "too-short"],
+    ["vocabulary_trainer_local_only", "replace-with-a-long-random-password", "too-short"],
 )
 def test_production_component_database_rejects_weak_password(
     database_password: str,
@@ -71,13 +72,16 @@ def test_production_component_database_rejects_weak_password(
             database_password=database_password,
             environment="production",
             cookie_secure=True,
-            allowed_origins=["https://verba.example"],
-            allowed_hosts=["verba.example"],
+            allowed_origins=["https://vocabulary-trainer.example"],
+            allowed_hosts=["vocabulary-trainer.example"],
         )
 
 
 def test_production_explicit_database_url_ignores_unused_component_password() -> None:
-    database_url = "postgresql+asyncpg://verba:managed-secret@db.example/verba"
+    database_url = (
+        "postgresql+asyncpg://vocabulary_trainer:managed-secret"
+        "@db.example/vocabulary_trainer"
+    )
 
     settings = Settings(
         _env_file=None,
@@ -85,8 +89,8 @@ def test_production_explicit_database_url_ignores_unused_component_password() ->
         database_password="too-short",
         environment="production",
         cookie_secure=True,
-        allowed_origins=["https://verba.example"],
-        allowed_hosts=["verba.example"],
+        allowed_origins=["https://vocabulary-trainer.example"],
+        allowed_hosts=["vocabulary-trainer.example"],
     )
 
     assert settings.database_url == database_url
