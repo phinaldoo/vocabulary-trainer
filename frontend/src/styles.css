@@ -326,17 +326,22 @@ kbd { border: 1px solid rgb(0 0 0 / 12%); border-radius: 5px; background: rgb(25
 .answer-form input:focus { border-color: var(--ink); outline: none; }
 .answer-form > p { margin: 9px 3px 0; display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 10px; }
 .answer-form > p svg { width: 13px; }
-.answer-result { margin-top: 20px; border-radius: var(--radius); padding: 16px 20px; display: flex; align-items: center; gap: 14px; }
-.answer-result > span { width: 38px; height: 38px; border-radius: var(--radius-sm); display: grid; place-items: center; }
-.answer-result > span svg { width: 19px; }
+.answer-result { margin-top: 20px; border-radius: var(--radius); padding: 18px 20px; display: grid; grid-template-columns: minmax(210px, .9fr) minmax(0, 1.6fr); align-items: center; gap: 20px; }
+.answer-result-header { min-width: 0; display: flex; align-items: flex-start; gap: 12px; }
+.answer-result-header > svg { width: 24px; height: 24px; flex: 0 0 auto; margin-top: 1px; }
+.answer-result-copy { min-width: 0; }
 .answer-result.correct { background: var(--green-soft); color: var(--green); }
 .answer-result.incorrect { background: var(--red-soft); color: var(--red); }
-.answer-result strong { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.answer-result strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.answer-result-copy > span { display: block; margin-top: 7px; color: var(--ink); font: 500 18px/1.25 Georgia, serif; overflow-wrap: anywhere; }
+.answer-result-copy b { font-weight: 600; }
 .answer-result p { margin: 4px 0 0; color: var(--ink); font: 500 19px Georgia, serif; }
 .answer-result small { display: block; margin-top: 4px; color: #6d9480; font-size: 9px; }
-.rating-grid { margin-top: 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.rating-grid { margin-top: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .rating-grid button, .binary-rating button { min-height: 56px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: white; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-size: 12px; font-weight: 550; transition: border-color 120ms ease; }
 .rating-grid button:hover { border-color: var(--ink); }
+.rating-grid button > span { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.rating-grid button > svg { width: 23px; height: 23px; }
 .rating-grid .again { color: var(--red); }
 .rating-grid .good, .rating-grid .easy { color: var(--green); }
 .continue-button { margin-top: 14px; }
@@ -613,6 +618,7 @@ kbd { border: 1px solid rgb(0 0 0 / 12%); border-radius: 5px; background: rgb(25
   .card-face h1 { font-size: clamp(34px, 11vw, 48px); }
   .answer-form > div { grid-template-columns: 1fr; }
   .answer-form .button { width: 100%; }
+  .answer-result { grid-template-columns: 1fr; gap: 16px; }
   .rating-grid { grid-template-columns: repeat(2, 1fr); }
   .binary-rating { grid-template-columns: 1fr; }
   .completion-card { margin-top: 4vh; padding: 40px 22px; }

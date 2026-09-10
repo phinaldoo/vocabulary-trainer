@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { api, ApiError } from '../api/client';
+import { api, ApiError, createIdempotencyKey } from '../api/client';
 import { useResource } from '../api/useResource';
 import { useAuth } from '../auth/AuthContext';
 import { PageError, PageLoading } from '../components/PageState';
@@ -237,7 +237,7 @@ function Study({ session, setSession, leave }: { session: StudySession; setSessi
       : {
           cardId: card.item_id,
           body: {
-            idempotency_key: crypto.randomUUID(),
+            idempotency_key: createIdempotencyKey(),
             item_id: card.item_id,
             base_version: card.state_version,
             response_ms: Math.min(600000, Date.now() - startedAt.current),
@@ -306,7 +306,7 @@ function Study({ session, setSession, leave }: { session: StudySession; setSessi
         </div>
 
         {session.input_mode === 'typing' && !checked && <form className="answer-form" onSubmit={check}><label htmlFor="answer">{t('learn.yourAnswer')}</label><div><input ref={inputRef} id="answer" autoComplete="off" value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder={t('learn.answerPlaceholder', { language: answerLabel })} /><button className="button primary" disabled={!answer.trim() || submitting}>{t('learn.check')} <ArrowRight /></button></div></form>}
-        {session.input_mode === 'typing' && checked && <section className={`answer-result ${checked.correct ? 'correct' : 'incorrect'}`}><header>{checked.correct ? <Check /> : <X />}<div><strong>{checked.correct ? t('landing.correct') : t('learn.notQuite')}</strong><span>{t('learn.solutionInline')} <b lang={card.answer_language}>{solution}</b></span></div></header><div className="rating-grid">{ratingOptions.map((option) => <button ref={option.value === 2 ? actionRef : undefined} type="button" key={option.value} className={option.tone} disabled={submitting} onClick={() => void rate(option.value)}>{option.value === 0 && <RotateCcw />}<span>{t(option.label as MessageKey)}<small>{t('learn.key', { key: option.key })}</small></span></button>)}</div></section>}
+        {session.input_mode === 'typing' && checked && <section className={`answer-result ${checked.correct ? 'correct' : 'incorrect'}`}><header className="answer-result-header">{checked.correct ? <Check /> : <X />}<div className="answer-result-copy"><strong>{checked.correct ? t('landing.correct') : t('learn.notQuite')}</strong><span>{t('learn.solutionInline')} <b lang={card.answer_language}>{solution}</b></span></div></header><div className="rating-grid">{ratingOptions.map((option) => <button ref={option.value === 2 ? actionRef : undefined} type="button" key={option.value} className={option.tone} disabled={submitting} onClick={() => void rate(option.value)}>{option.value === 0 && <RotateCcw />}<span>{t(option.label as MessageKey)}<small>{t('learn.key', { key: option.key })}</small></span></button>)}</div></section>}
         {session.input_mode === 'reveal' && !revealed && <button className="button primary large continue-button" disabled={submitting} onClick={() => void reveal()}>{t('learn.flip')} <Layers3 /></button>}
         {session.input_mode === 'reveal' && revealed && <div className="binary-rating"><button ref={actionRef} className="button secondary no" disabled={submitting} onClick={() => void rate(false)}><X /> {t('learn.didNotKnow')} <small>1</small></button><button className="button secondary yes" disabled={submitting} onClick={() => void rate(true)}><Check /> {t('learn.didKnow')} <small>2</small></button></div>}
         {error && <p className="form-error centered" role="alert">{error}</p>}
