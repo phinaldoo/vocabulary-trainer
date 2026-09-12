@@ -95,7 +95,7 @@ async def test_account_language_initialization_and_user_override() -> None:
                 "/api/v1/account/settings",
                 headers=_mutation_headers(client),
                 json={
-                    "daily_goal": 12,
+                    "daily_goal": 500,
                     "direction": "forward",
                     "input_mode": "typing",
                     "language": "de",
@@ -105,6 +105,7 @@ async def test_account_language_initialization_and_user_override() -> None:
             )
             assert settings.status_code == 200, settings.text
             assert settings.json()["language"] == "de"
+            assert settings.json()["daily_goal"] == 500
 
 
 @pytest.mark.asyncio

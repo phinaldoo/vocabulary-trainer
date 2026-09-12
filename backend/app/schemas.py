@@ -121,7 +121,7 @@ class LoginRequest(BaseModel):
 class SettingsUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    daily_goal: int = Field(ge=5, le=50)
+    daily_goal: int = Field(ge=5, le=500)
     direction: Direction
     input_mode: InputMode
     language: UiLanguage | None = None

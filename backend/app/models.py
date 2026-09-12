@@ -31,7 +31,7 @@ class Base(DeclarativeBase):
 class User(Base):
     __tablename__ = "users"
     __table_args__ = (
-        CheckConstraint("daily_goal BETWEEN 5 AND 50", name="users_daily_goal_check"),
+        CheckConstraint("daily_goal BETWEEN 5 AND 500", name="users_daily_goal_check"),
         CheckConstraint(
             "direction IN ('forward', 'reverse', 'mixed')",
             name="users_direction_check",

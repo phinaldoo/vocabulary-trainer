@@ -66,7 +66,7 @@ describe('SettingsPage language preference', () => {
 
     expect(document.documentElement.lang).toBe('zh-Hans');
     expect(screen.getByRole('heading', { name: '设置' })).toBeInTheDocument();
-    await event.click(screen.getByRole('button', { name: '保存更改' }));
+    expect(screen.queryByRole('button', { name: '保存更改' })).not.toBeInTheDocument();
 
     await waitFor(() => expect(mockApi).toHaveBeenCalledWith('/account/settings', expect.objectContaining({
       method: 'PATCH',
@@ -74,6 +74,21 @@ describe('SettingsPage language preference', () => {
     const settingsCall = mockApi.mock.calls.find(([path]) => path === '/account/settings');
     expect(JSON.parse(String(settingsCall?.[1]?.body))).toMatchObject({ language: 'zh-Hans' });
     expect(mockUpdateUser).toHaveBeenCalledWith(expect.objectContaining({ language: 'zh-Hans' }));
+  });
+
+  it('automatically saves every expanded daily goal without saving on mount', async () => {
+    const event = userEvent.setup();
+    render(<I18nProvider><MemoryRouter><SettingsPage /></MemoryRouter></I18nProvider>);
+    const selector = await screen.findByRole('combobox', { name: 'Daily goal' });
+    expect(mockApi.mock.calls.some(([path]) => path === '/account/settings')).toBe(false);
+    for (const goal of [100, 150, 200, 250, 500]) {
+      await event.selectOptions(selector, String(goal));
+      await waitFor(() => expect(mockApi).toHaveBeenCalledWith('/account/settings', {
+        method: 'PATCH',
+        body: expect.stringContaining('"daily_goal":' + goal),
+      }));
+    }
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument();
   });
 
   it('updates the signed-in account name and email', async () => {
