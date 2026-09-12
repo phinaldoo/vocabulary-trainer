@@ -135,7 +135,24 @@ make lint
 make build
 ```
 
-The automated workflows cover administrator authorization, shared catalogue
+GitHub Actions runs on every pull request, pushes to `main`, and manual dispatches:
+
+- **Backend checks**: Python 3.12, Ruff, and pytest.
+- **Frontend checks**: Node.js 22, oxlint, Vitest, TypeScript, and the Vite production build.
+- **Docker smoke test**: builds and starts the production Compose stack, applies
+  migrations against PostgreSQL, waits for healthy services, and checks the
+  frontend and nginx-proxied API. Failed runs print container logs.
+
+No repository secrets are needed. Actions are pinned to commit hashes, dependency
+downloads are cached, and superseded runs are cancelled. To enforce CI before
+merging, configure a GitHub branch ruleset for `main` requiring **Backend checks**,
+**Frontend checks**, and **Docker smoke test**.
+
+Dependabot opens weekly updates for Python, npm, GitHub Actions, Docker base
+images, and Compose images. Python and npm minor/patch updates are grouped;
+major updates remain separate for review.
+
+The automated tests cover administrator authorization, shared catalogue
 visibility, per-user isolation, deck/section scoping, both study modes, answer
 matching, scheduler behavior, session snapshots, review idempotency, import
 conflicts, account profile updates, and account deletion.
