@@ -82,8 +82,29 @@ async def update_settings(
         )
         if not section:
             raise ApiError(404, "section_not_found", "Dieser Abschnitt gehört nicht zum Deck.")
+    if payload.selected_section_ids is not None:
+        section_ids = list(dict.fromkeys(payload.selected_section_ids))
+        if payload.selected_section_id and section_ids != [payload.selected_section_id]:
+            raise ApiError(422, "invalid_selection", "Widersprüchliche Abschnittsauswahl.")
+        valid_ids = set(await db.scalars(select(Section.id).where(
+            Section.id.in_(section_ids),
+            Section.deck_id == payload.selected_deck_id,
+            Section.active.is_(True),
+        )))
+        if valid_ids != set(section_ids):
+            raise ApiError(404, "section_not_found", "Dieser Abschnitt gehört nicht zum Deck.")
+        user.selected_section_ids = [str(value) for value in section_ids]
+        user.selected_section_id = section_ids[0] if len(section_ids) == 1 else None
+    else:
+        # Legacy clients may update unrelated preferences without knowing about lists.
+        if (user.selected_deck_id, user.selected_section_id) != (
+            payload.selected_deck_id, payload.selected_section_id
+        ):
+            user.selected_section_ids = (
+                [str(payload.selected_section_id)] if payload.selected_section_id else []
+            )
+        user.selected_section_id = payload.selected_section_id
     user.selected_deck_id = payload.selected_deck_id
-    user.selected_section_id = payload.selected_section_id
     await db.commit()
     await db.refresh(user)
     response.headers["Cache-Control"] = "private, no-store"

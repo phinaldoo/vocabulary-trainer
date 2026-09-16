@@ -95,20 +95,21 @@ async def create_study_session(
     )
     if not deck:
         raise ApiError(404, "deck_not_found", "Dieses Deck ist nicht veröffentlicht.")
-    if payload.section_id is not None:
-        section = await db.scalar(
-            select(Section).where(
-                Section.id == payload.section_id,
+    section_ids = payload.section_ids or []
+    if section_ids:
+        valid_ids = set(await db.scalars(
+            select(Section.id).where(
+                Section.id.in_(section_ids),
                 Section.deck_id == deck.id,
                 Section.active.is_(True),
             )
-        )
-        if not section:
+        ))
+        if valid_ids != set(section_ids):
             raise ApiError(404, "section_not_found", "Dieser Abschnitt gehört nicht zum Deck.")
 
     card_query = select(Card).where(Card.deck_id == deck.id, Card.active.is_(True))
-    if payload.section_id is not None:
-        card_query = card_query.where(Card.section_id == payload.section_id)
+    if section_ids:
+        card_query = card_query.where(Card.section_id.in_(section_ids))
     cards = list((await db.scalars(card_query.order_by(Card.sort_order))).all())
     if not cards:
         raise ApiError(409, "no_cards", "Für diese Auswahl sind keine Karten veröffentlicht.")
@@ -169,6 +170,7 @@ async def create_study_session(
         user_id=user.id,
         deck_id=deck.id,
         section_id=payload.section_id,
+        section_ids=[str(value) for value in section_ids],
         direction=payload.direction,
         input_mode=payload.input_mode,
         selection_mode=payload.selection_mode,
@@ -199,6 +201,7 @@ async def create_study_session(
 
     user.selected_deck_id = deck.id
     user.selected_section_id = payload.section_id
+    user.selected_section_ids = [str(value) for value in section_ids]
     user.direction = payload.direction
     user.input_mode = payload.input_mode
     await db.commit()
@@ -221,6 +224,16 @@ async def get_study_session(
     if not session_row:
         raise ApiError(404, "study_session_not_found", "Diese Lerneinheit gibt es nicht.")
     study_session, deck, selected_section_title = session_row
+
+    section_ids = (
+        [uuid.UUID(value) for value in study_session.section_ids]
+        if study_session.section_ids is not None
+        else [study_session.section_id] if study_session.section_id else []
+    )
+    titles = dict((await db.execute(
+        select(Section.id, Section.title).where(Section.id.in_(section_ids))
+    )).all())
+    section_titles = [titles[value] for value in section_ids if value in titles]
 
     rows = (
         await db.execute(
@@ -269,6 +282,8 @@ async def get_study_session(
         deck_title=deck.title,
         section_id=study_session.section_id,
         section_title=selected_section_title,
+        section_ids=section_ids,
+        section_titles=section_titles,
         front_label=deck.front_label,
         back_label=deck.back_label,
         front_language=deck.front_language,

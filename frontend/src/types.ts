@@ -17,6 +17,7 @@ export type User = {
   input_mode: InputMode;
   selected_deck_id: string | null;
   selected_section_id: string | null;
+  selected_section_ids?: string[] | null;
   created_at: string;
 };
 
@@ -112,6 +113,8 @@ export type StudySession = {
   deck_id: string;
   deck_title: string;
   section_id: string | null;
+  section_ids?: string[];
+  section_titles?: string[];
   section_title: string | null;
   front_label: string;
   back_label: string;

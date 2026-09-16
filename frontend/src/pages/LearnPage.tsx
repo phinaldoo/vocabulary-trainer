@@ -36,8 +36,8 @@ function SectionPicker({
   onSelect,
 }: {
   sections: Section[];
-  selected: string | null;
-  onSelect(value: string | null): void;
+  selected: string[];
+  onSelect(value: string[]): void;
 }) {
   const { language, number, t } = useI18n();
   const [query, setQuery] = useState('');
@@ -50,15 +50,15 @@ function SectionPicker({
     <div className="chapter-picker">
       <label className="search-field" htmlFor="section-search">
         <Search aria-hidden="true" />
-        <input id="section-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('learn.searchSection')} />
+        <input id="section-search" aria-label={t('learn.searchSection')} value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('learn.searchSection')} />
       </label>
       <div className="chapter-grid" role="group" aria-label={t('learn.chooseSection')}>
-        <button type="button" aria-pressed={selected === null} className={selected === null ? 'selected all-chapters' : 'all-chapters'} onClick={() => onSelect(null)}>
+        <button type="button" aria-pressed={selected.length === 0} className={selected.length === 0 ? 'selected all-chapters' : 'all-chapters'} onClick={() => onSelect([])}>
           <span><Layers3 /> {t('common.allSections')}</span><small>{t(total === 1 ? 'common.cardsOne' : 'common.cardsMany', { count: number(total) })}</small>
         </button>
         {filtered.map((section) => (
-          <button key={section.id} type="button" aria-pressed={selected === section.id} className={selected === section.id ? 'selected' : ''} onClick={() => onSelect(section.id)}>
-            <span>{section.title}</span>
+          <button key={section.id} type="button" aria-pressed={selected.includes(section.id)} className={selected.includes(section.id) ? 'selected' : ''} onClick={() => onSelect(selected.includes(section.id) ? selected.filter((id) => id !== section.id) : [...selected, section.id])}>
+            <span>{selected.includes(section.id) && <Check aria-hidden="true" />}{section.title}</span>
             <small>{t('learn.sectionSummary', { cards: t(section.total === 1 ? 'common.cardsOne' : 'common.cardsMany', { count: number(section.total) }), percent: number(section.progress_percent) })}</small>
             {section.due > 0 && <em>{t('learn.due', { count: number(section.due) })}</em>}
           </button>
@@ -71,6 +71,7 @@ function SectionPicker({
 type StartConfig = {
   deck_id: string;
   section_id: string | null;
+  section_ids: string[];
   direction: Direction;
   input_mode: InputMode;
   selection_mode: SelectionMode;
@@ -88,8 +89,11 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
       ? user!.selected_deck_id!
       : decks[0]?.id ?? '';
   const [deckId, setDeckId] = useState(initialDeckId);
-  const requestedSection = params.get('section');
-  const [sectionId, setSectionId] = useState<string | null>(requestedSection ?? user?.selected_section_id ?? null);
+  const [sectionIds, setSectionIds] = useState<string[]>(() => {
+    if (params.has('section')) return [...new Set(params.getAll('section').filter(Boolean))];
+    if (requestedDeck) return [];
+    return user?.selected_section_ids ?? (user?.selected_section_id ? [user.selected_section_id] : []);
+  });
   const [direction, setDirection] = useState<Direction>(user?.direction ?? 'forward');
   const [mode, setMode] = useState<InputMode>(user?.input_mode ?? 'typing');
   const requestedSelection = params.get('selection');
@@ -103,16 +107,17 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
   const deck = decks.find((entry) => entry.id === deckId) ?? decks[0];
 
   useEffect(() => {
-    if (!sections.data || !sectionId) return;
-    if (!sections.data.some((section) => section.id === sectionId)) setSectionId(null);
-  }, [sectionId, sections.data]);
+    if (sections.loading || sections.error || !sections.data) return;
+    const valid = sectionIds.filter((id) => sections.data!.some((section) => section.id === id && section.deck_id === deckId));
+    if (valid.length !== sectionIds.length) selectSection(valid);
+  }, [sectionIds, sections.data, sections.loading, sections.error, deckId]);
 
   async function begin() {
     if (!deck) return;
     setStarting(true);
     setError('');
     try {
-      await start({ deck_id: deck.id, section_id: sectionId, direction, input_mode: mode, selection_mode: selectionMode, limit });
+      await start({ deck_id: deck.id, section_id: sectionIds.length === 1 ? sectionIds[0]! : null, section_ids: sectionIds, direction, input_mode: mode, selection_mode: selectionMode, limit });
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : t('learn.startError'));
     } finally {
@@ -122,23 +127,24 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
 
   function selectDeck(value: string) {
     setDeckId(value);
-    setSectionId(null);
+    setSectionIds([]);
     const next = new URLSearchParams(params);
     next.set('deck', value);
     next.delete('section');
     setParams(next, { replace: true });
   }
 
-  function selectSection(value: string | null) {
-    setSectionId(value);
+  function selectSection(value: string[]) {
+    setSectionIds(value);
     const next = new URLSearchParams(params);
-    if (value) next.set('section', value);
-    else next.delete('section');
+    next.delete('section');
+    for (const id of value) next.append('section', id);
+    next.set('deck', deckId);
     setParams(next, { replace: true });
   }
 
   if (!deck) return null;
-  const sectionTitle = sections.data?.find((section) => section.id === sectionId)?.title;
+  const sectionTitle = sections.data?.filter((section) => sectionIds.includes(section.id)).map((section) => section.title).join(', ');
 
   return (
     <main className="page-wrap learn-setup">
@@ -147,7 +153,7 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
       <section className="setup-section panel">
         <div className="setup-heading"><span>1</span><div><h2>{t('learn.chooseDeckSection')}</h2><p>{t('learn.managedContent')}</p></div></div>
         <label className="deck-select"><span>{t('common.deck')}</span><div className="select-wrap"><select value={deck.id} onChange={(event) => selectDeck(event.target.value)}>{decks.map((entry) => <option value={entry.id} key={entry.id}>{entry.title} · {entry.front_label} → {entry.back_label}</option>)}</select><ChevronDown /></div></label>
-        {sections.loading ? <PageLoading label={t('common.sectionsLoading')} /> : sections.data ? <SectionPicker sections={sections.data} selected={sectionId} onSelect={selectSection} /> : <PageError message={sections.error} retry={() => void sections.reload()} />}
+        {sections.loading ? <PageLoading label={t('common.sectionsLoading')} /> : sections.error ? <PageError message={sections.error} retry={() => void sections.reload()} /> : sections.data ? <SectionPicker sections={sections.data} selected={sectionIds} onSelect={selectSection} /> : <PageError message={sections.error} retry={() => void sections.reload()} />}
       </section>
 
       <section className="setup-two-column">
@@ -171,7 +177,7 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
         </article>
       </section>
       {error && <p className="form-error centered" role="alert">{error}</p>}
-      <div className="setup-footer"><div><strong>{deck.title}</strong><span> · {sectionTitle ?? t('common.allSections')} · {t(`learn.selection.${selectionMode}`)} · {mode === 'typing' ? t('learn.modeTyping') : t('settings.revealCard')} · {t(limit === 1 ? 'common.cardsOne' : 'common.cardsMany', { count: number(limit) })}</span></div><button className="button primary large" type="button" disabled={starting || sections.loading} onClick={() => void begin()}>{starting ? t('learn.preparing') : t('dashboard.start')} {!starting && <ArrowRight />}</button></div>
+      <div className="setup-footer"><div><strong>{deck.title}</strong><span> · {sectionTitle || t('common.allSections')} · {t(`learn.selection.${selectionMode}`)} · {mode === 'typing' ? t('learn.modeTyping') : t('settings.revealCard')} · {t(limit === 1 ? 'common.cardsOne' : 'common.cardsMany', { count: number(limit) })}</span></div><button className="button primary large" type="button" disabled={starting || sections.loading || Boolean(sections.error) || !sections.data} onClick={() => void begin()}>{starting ? t('learn.preparing') : t('dashboard.start')} {!starting && <ArrowRight />}</button></div>
     </main>
   );
 }
@@ -288,7 +294,7 @@ function Study({ session, setSession, leave }: { session: StudySession; setSessi
 
   if (session.complete || !card) {
     const accuracy = session.reviewed ? Math.round((session.correct_reviewed / session.reviewed) * 100) : 0;
-    return <main className="study-shell"><section className="completion-card panel"><span className="completion-icon"><Sparkles /></span><p className="section-kicker">{t('learn.completed')}</p><h1>{t('learn.wellDone')}</h1><p>{t('learn.completedText', { count: number(session.reviewed), source: session.section_title ?? session.deck_title })}</p><div className="completion-stats"><div><strong>{number(session.reviewed)}</strong><span>{t('learn.reviewed')}</span></div><div><strong>{number(accuracy)}%</strong><span>{t('learn.known')}</span></div></div><div className="completion-actions"><button className="button primary" onClick={leave}>{t('learn.newSessionButton')}</button><Link className="button secondary" to="/">{t('learn.overview')}</Link></div></section></main>;
+    return <main className="study-shell"><section className="completion-card panel"><span className="completion-icon"><Sparkles /></span><p className="section-kicker">{t('learn.completed')}</p><h1>{t('learn.wellDone')}</h1><p>{t('learn.completedText', { count: number(session.reviewed), source: session.section_titles?.join(', ') || session.section_title || session.deck_title })}</p><div className="completion-stats"><div><strong>{number(session.reviewed)}</strong><span>{t('learn.reviewed')}</span></div><div><strong>{number(accuracy)}%</strong><span>{t('learn.known')}</span></div></div><div className="completion-actions"><button className="button primary" onClick={leave}>{t('learn.newSessionButton')}</button><Link className="button secondary" to="/">{t('learn.overview')}</Link></div></section></main>;
   }
 
   const progress = session.total ? (session.reviewed / session.total) * 100 : 0;
@@ -353,6 +359,7 @@ export function LearnPage() {
         ...user,
         selected_deck_id: config.deck_id,
         selected_section_id: config.section_id,
+        selected_section_ids: config.section_ids,
         direction: config.direction,
         input_mode: config.input_mode,
       });
@@ -367,7 +374,7 @@ export function LearnPage() {
     setSession(null);
     const search = new URLSearchParams();
     if (session?.deck_id) search.set('deck', session.deck_id);
-    if (session?.section_id) search.set('section', session.section_id);
+    for (const id of session?.section_ids ?? (session?.section_id ? [session.section_id] : [])) search.append('section', id);
     if (session?.selection_mode) search.set('selection', session.selection_mode);
     setParams(search, { replace: true });
   }

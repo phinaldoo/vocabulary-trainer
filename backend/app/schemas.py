@@ -81,6 +81,7 @@ class UserPublic(BaseModel):
     input_mode: InputMode
     selected_deck_id: uuid.UUID | None
     selected_section_id: uuid.UUID | None
+    selected_section_ids: list[uuid.UUID] | None = None
     created_at: datetime
 
 
@@ -128,6 +129,7 @@ class SettingsUpdate(BaseModel):
     language: UiLanguage | None = None
     selected_deck_id: uuid.UUID | None = None
     selected_section_id: uuid.UUID | None = None
+    selected_section_ids: list[uuid.UUID] | None = Field(default=None, max_length=1000)
 
 
 class AccountProfileUpdate(BaseModel):
@@ -306,10 +308,22 @@ class StudySessionCreate(BaseModel):
 
     deck_id: uuid.UUID
     section_id: uuid.UUID | None = None
+    section_ids: list[uuid.UUID] | None = Field(default=None, max_length=1000)
     direction: Direction
     input_mode: InputMode
     selection_mode: SelectionMode = "scheduled"
     limit: int = Field(ge=1, le=50)
+
+    @model_validator(mode="after")
+    def normalize_sections(self) -> StudySessionCreate:
+        if self.section_ids is not None:
+            self.section_ids = list(dict.fromkeys(self.section_ids))
+            if self.section_id is not None and self.section_ids != [self.section_id]:
+                raise ValueError("Use either section_id or section_ids, not conflicting selections")
+        else:
+            self.section_ids = [self.section_id] if self.section_id else []
+        self.section_id = self.section_ids[0] if len(self.section_ids) == 1 else None
+        return self
 
 
 class StudyCard(BaseModel):
@@ -333,6 +347,8 @@ class StudySessionPublic(BaseModel):
     deck_id: uuid.UUID
     deck_title: str
     section_id: uuid.UUID | None
+    section_ids: list[uuid.UUID]
+    section_titles: list[str]
     section_title: str | None
     front_label: str
     back_label: str
