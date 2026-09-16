@@ -19,6 +19,7 @@ Password = Annotated[str, StringConstraints(min_length=10, max_length=128)]
 Direction = Literal["forward", "reverse", "mixed"]
 CardDirection = Literal["forward", "reverse"]
 InputMode = Literal["typing", "reveal"]
+SelectionMode = Literal["scheduled", "random", "adaptive"]
 UiLanguage = Literal["en", "zh-Hans", "hi", "es", "de"]
 DeckStatus = Literal["draft", "published", "archived"]
 MatcherProfile = Literal["generic-v1", "german-v1", "latin-v1"]
@@ -307,6 +308,7 @@ class StudySessionCreate(BaseModel):
     section_id: uuid.UUID | None = None
     direction: Direction
     input_mode: InputMode
+    selection_mode: SelectionMode = "scheduled"
     limit: int = Field(ge=1, le=50)
 
 
@@ -326,6 +328,7 @@ class StudyCard(BaseModel):
 
 
 class StudySessionPublic(BaseModel):
+    selection_mode: SelectionMode
     id: uuid.UUID
     deck_id: uuid.UUID
     deck_title: str

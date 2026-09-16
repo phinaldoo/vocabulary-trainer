@@ -1,5 +1,6 @@
 export type Direction = 'forward' | 'reverse' | 'mixed';
 export type CardDirection = Exclude<Direction, 'mixed'>;
+export type SelectionMode = 'scheduled' | 'random' | 'adaptive';
 export type InputMode = 'typing' | 'reveal';
 export type UiLanguage = 'en' | 'zh-Hans' | 'hi' | 'es' | 'de';
 export type DeckStatus = 'draft' | 'published' | 'archived';
@@ -106,6 +107,7 @@ export type StudyCard = {
 };
 
 export type StudySession = {
+  selection_mode: SelectionMode;
   id: string;
   deck_id: string;
   deck_title: string;

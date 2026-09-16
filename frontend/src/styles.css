@@ -279,6 +279,7 @@ button:disabled { cursor: not-allowed; opacity: .4; }
 .choice-cards strong { margin-top: 14px; font-size: 13.5px; font-weight: 600; }
 .choice-cards small { margin-top: 6px; color: var(--muted); font-size: 11px; line-height: 1.5; }
 .choice-check { position: absolute; right: 15px; top: 15px; width: 18px; color: var(--ink); }
+.compact-settings > p { color: var(--muted); font-size: 12px; line-height: 1.6; margin: 8px 0 0; }
 .compact-settings { display: flex; flex-direction: column; }
 .compact-settings > label, .settings-form > label { display: block; margin-top: 13px; }
 .compact-settings label > span, .settings-form label > span, .settings-form legend { display: block; margin-bottom: 7px; color: var(--ink); font-size: 12px; font-weight: 550; }

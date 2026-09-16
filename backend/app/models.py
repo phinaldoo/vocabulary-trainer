@@ -233,6 +233,9 @@ class StudySession(Base):
     )
     direction: Mapped[str] = mapped_column(String(16))
     input_mode: Mapped[str] = mapped_column(String(16))
+    selection_mode: Mapped[str] = mapped_column(
+        String(16), default="scheduled", server_default="scheduled"
+    )
     target_count: Mapped[int] = mapped_column(Integer)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

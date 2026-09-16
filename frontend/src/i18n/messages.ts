@@ -2,6 +2,15 @@ import type { UiLanguage } from '../types';
 
 // Key, English, Simplified Chinese, Hindi, Spanish, German.
 export const messageRows = [
+  ["learn.selectionMode", "Card selection", "卡片选择", "कार्ड चयन", "Selección de tarjetas", "Kartenauswahl"],
+  ["learn.selection.scheduled", "Due and new cards", "到期和新卡片", "नियत और नए कार्ड", "Tarjetas pendientes y nuevas", "Fällige und neue Karten"],
+  ["learn.selection.random", "Fully random", "完全随机", "पूरी तरह यादृच्छिक", "Totalmente aleatorio", "Völlig zufällig"],
+  ["learn.selection.adaptive", "Adaptive random", "自适应随机", "अनुकूलित यादृच्छिक", "Aleatorio adaptativo", "Adaptiver Zufall"],
+  ["learn.selectionHelp.scheduled", "Review due cards first, then learn new cards.", "先复习到期卡片，再学习新卡片。", "पहले नियत कार्ड दोहराएँ, फिर नए कार्ड सीखें।", "Repasa primero las tarjetas pendientes y luego aprende nuevas.", "Wiederhole zuerst fällige Karten und lerne danach neue."],
+  ["learn.selectionHelp.random", "Every card has an equal chance, including cards that are not due yet.", "每张卡片的机会均等，包括尚未到期的卡片。", "हर कार्ड का समान मौका है, उन कार्डों का भी जो अभी नियत नहीं हैं।", "Todas las tarjetas tienen la misma probabilidad, incluso las que aún no toca repasar.", "Jede Karte hat die gleiche Chance, auch wenn sie noch nicht fällig ist."],
+  ["learn.selectionHelp.adaptive", "Difficult and new cards appear more often. Repeatedly correct cards appear less often, but remain in the mix.", "困难卡片和新卡片出现得更频繁。多次答对的卡片出现得更少，但仍可能出现。", "कठिन और नए कार्ड अधिक बार आते हैं। बार-बार सही किए गए कार्ड कम आते हैं, लेकिन शामिल रहते हैं।", "Las tarjetas difíciles y nuevas aparecen más. Las acertadas repetidamente aparecen menos, pero siguen incluidas.", "Schwierige und neue Karten erscheinen häufiger. Wiederholt richtig beantwortete Karten erscheinen seltener, bleiben aber dabei."],
+  ["learn.randomSections", "Choose All sections to mix vocabulary across chapters. Each card appears at most once per session.", "选择所有章节以混合各章节词汇。每张卡片在每次练习中最多出现一次。", "अध्यायों के शब्द मिलाने के लिए सभी अनुभाग चुनें। हर कार्ड एक सत्र में अधिकतम एक बार आता है।", "Elige Todas las secciones para mezclar capítulos. Cada tarjeta aparece como máximo una vez por sesión.", "Wähle Alle Abschnitte, um Vokabeln aus verschiedenen Kapiteln zu mischen. Jede Karte erscheint höchstens einmal pro Einheit."],
+
   ['meta.title', 'Vocabulary Trainer – vocabulary that stays.', 'Vocabulary Trainer – 记得住的词汇。', 'Vocabulary Trainer – शब्द जो याद रहें।', 'Vocabulary Trainer – vocabulario que permanece.', 'Vocabulary Trainer – Wörter, die bleiben.'],
   ['meta.description', 'Vocabulary Trainer – intelligent, personal vocabulary practice.', 'Vocabulary Trainer——智能、个性化的词汇学习。', 'Vocabulary Trainer – बुद्धिमान और व्यक्तिगत शब्दावली अभ्यास।', 'Vocabulary Trainer: práctica de vocabulario inteligente y personal.', 'Vocabulary Trainer – intelligentes und persönliches Vokabeltraining.'],
   ['common.loading', 'Loading …', '正在加载…', 'लोड हो रहा है…', 'Cargando…', 'Wird geladen …'],
