@@ -201,7 +201,9 @@ notices.
 ### Random vocabulary practice
 
 In the learning setup, choose **All sections** to mix vocabulary across chapters in
-one deck, or select a section to practice within it. Under **Card selection**, choose:
+one deck, or toggle individual sections to practice any combination. The selection is saved
+for your next session and restored when you resume or repeat a session. Selecting
+**All sections** or deselecting the last selected section resets the filter. Under **Card selection**, choose:
 
 - **Due and new cards**: the existing schedule, followed by unseen cards.
 - **Fully random**: every active card in the selection has an equal chance,
@@ -217,3 +219,9 @@ favors the weaker one. Answers update the same learning progress as scheduled
 practice; subsequent sessions use the updated weights. Resuming a session preserves
 its original selection and order. The API accepts `selection_mode` as `scheduled`
 (default), `random`, or `adaptive` on `POST /api/v1/study-sessions`.
+
+The study API accepts `section_ids` as an array of section UUIDs; an empty array
+means all sections. IDs are deduplicated and must belong to the published deck
+and active sections. The legacy `section_id` remains supported. Conflicting
+singular and plural selections are rejected. Session responses include
+`section_ids` and `section_titles`. Apply `alembic upgrade head` when upgrading.

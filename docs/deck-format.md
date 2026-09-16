@@ -60,7 +60,12 @@ Each side declares one matcher:
 - `generic-v1`: Unicode-aware, case-insensitive exact matching after punctuation
   and whitespace normalization. Put accepted alternatives in `answers`.
 - `german-v1`: German dictionary-form matching with article, parenthesis, and
-  common keyboard-spelling handling.
+  common keyboard-spelling handling. All comma-/semicolon-separated meanings and
+  separate utterances are required, in any order. Slash variants remain alternatives;
+  parenthetical content, articles, punctuation, and extra whitespace are optional.
+  Word boundaries are still required. Incomplete answers report missing meanings.
+  Explicit `answers` entries remain alternative complete answer specifications;
+  do not use them to list individual meanings of a multi-meaning answer.
 - `latin-v1`: Latin principal-part and construction matching used by migrated
   legacy decks.
 

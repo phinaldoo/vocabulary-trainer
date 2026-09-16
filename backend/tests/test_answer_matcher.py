@@ -15,22 +15,9 @@ from app.services.answer_matcher import (
     [
         ("unter (der) Kristallbrücke warten", "warten unter Kristallbrücke"),
         ("unter (der) Kristallbrücke warten", "unter der Kristallbrücke warten"),
-        ("funkeln (bei Nacht), schimmern", "funkeln"),
-        ("funkeln (bei Nacht), schimmern", "bei Nacht funkeln"),
-        ("funkeln (bei Nacht), schimmern", "schimmern"),
         ("Mira (die Hüterin der Sterne)", "Mira"),
         ("Mira (die Hüterin der Sterne)", "Hüterin Sterne Mira"),
-        ("die (Sternen-)Karte, das Leuchtbild", "Karte"),
-        ("die (Sternen-)Karte, das Leuchtbild", "Sternenkarte"),
-        ("die (Sternen-)Karte, das Leuchtbild", "Leuchtbild"),
-        ("leuchte(t) hell!, blinke rot / blau!", "leuchte hell"),
-        ("leuchte(t) hell!, blinke rot / blau!", "leuchtet hell"),
-        ("leuchte(t) hell!, blinke rot / blau!", "blinke rot"),
-        ("leuchte(t) hell!, blinke rot / blau!", "blinke blau"),
-        ("der Mondstein, das Nachtjuwel", "Mondstein"),
-        ("der Mondstein, das Nachtjuwel", "das Nachtjuwel"),
         ("die Wolkenlaterne, das Himmelslicht", "Himmelslicht Wolkenlaterne"),
-        ("drehen, kippen, stapeln, sortieren", "drehen stapeln"),
         ("er (sie, es) glimmt", "er glimmt"),
         ("er (sie, es) glimmt", "sie glimmt"),
         ("er (sie, es) glimmt", "es glimmt"),
@@ -41,7 +28,6 @@ from app.services.answer_matcher import (
         ("die Süßtorte", "Suesstorte"),
         ("die Süßtorte", "Susstorte"),
         ("Nova Aurelia Äon", "Aeon Nova Aurelia"),
-        ("Zähle die Monde! Ordne die Sterne (nach Farben)!", "Ordne die Sterne"),
     ],
 )
 def test_german_user_friendly_answers(expected: str, answer: str) -> None:
@@ -115,24 +101,6 @@ def test_latin_requires_the_lemma_and_no_unknown_tokens(expected: str, answer: s
 @pytest.mark.parametrize(
     ("expected", "answer"),
     [
-        ("Der Würfel leuchtet. Das Papierboot dreht sich.", "Der Würfel leuchtet"),
-        ("Der Würfel leuchtet. Das Papierboot dreht sich.", "Das Papierboot dreht sich"),
-        (
-            "Ich zählte Monde, bevor der Roboter erwachte. "
-            "Die Laterne summte früher, als der Würfel landete.",
-            "Die Laterne summte früher als der Würfel landete",
-        ),
-        ("dreh links!, dreht rechts!", "dreh links"),
-        ("dreh links!, dreht rechts!", "dreht rechts"),
-    ],
-)
-def test_complete_german_sentence_alternatives_are_accepted(expected: str, answer: str) -> None:
-    assert match_text(answer, expected, language="de").correct
-
-
-@pytest.mark.parametrize(
-    ("expected", "answer"),
-    [
         ("Der Würfel leuchtet. Das Papierboot dreht sich.", "Der Würfel"),
         ("Sobald drei Lampen blinken, startet die Maschine.", "Sobald drei Lampen blinken"),
         ("Sobald drei Lampen blinken, startet die Maschine.", "startet die Maschine"),
@@ -144,41 +112,6 @@ def test_complete_german_sentence_alternatives_are_accepted(expected: str, answe
 )
 def test_german_sentence_fragments_are_rejected(expected: str, answer: str) -> None:
     assert not match_text(answer, expected, language="de").correct
-
-
-@pytest.mark.parametrize(
-    ("expected", "answer"),
-    [
-        ("sondern, aber", "sondern"),
-        ("denn, aber, nämlich", "nämlich"),
-        ("dass, weil", "weil"),
-        ("obwohl, auch wenn", "auch wenn"),
-        ("als, nachdem", "nachdem"),
-        ("zwischen, während, unter", "unter"),
-        ("und auch, und", "und"),
-        ("weil, nachdem, obwohl, als", "obwohl"),
-        ("ob nicht, ob", "ob"),
-        ("wenn doch, hoffentlich", "hoffentlich"),
-        ("wenn auch, aber, obwohl", "obwohl"),
-        ("oder wenn, oder", "oder"),
-    ],
-)
-def test_short_german_conjunctions_remain_alternatives(expected: str, answer: str) -> None:
-    assert match_text(answer, expected, language="de").correct
-
-
-@pytest.mark.parametrize(
-    ("expected", "answer"),
-    [
-        ("zu (m. Inf.), dass", "dass"),
-        ("zu (m. Inf.), dass", "zu"),
-        ("dass keinesfalls, keinesfalls zu (m. Inf.)", "keinesfalls zu"),
-        ("sodass, damit, um zu (m. Inf.), dass", "damit"),
-        ("wirklich, tatsächlich, aber", "tatsächlich"),
-    ],
-)
-def test_long_german_dictionary_alternatives_remain_separate(expected: str, answer: str) -> None:
-    assert match_text(answer, expected, language="de").correct
 
 
 @pytest.mark.parametrize(
@@ -278,3 +211,87 @@ def test_malformed_parentheses_fail_catalogue_validation() -> None:
 )
 def test_deck_answer_specs_compile(text: str, answers: list[str], profile: str) -> None:
     validate_answer_spec(text, answers, matcher_profile=profile)
+
+
+@pytest.mark.parametrize(
+    ("expected", "answer"),
+    [
+        ("funkeln (bei Nacht), schimmern", "funkeln"),
+        ("funkeln (bei Nacht), schimmern", "bei Nacht funkeln"),
+        ("funkeln (bei Nacht), schimmern", "schimmern"),
+        ("die (Sternen-)Karte, das Leuchtbild", "Karte"),
+        ("die (Sternen-)Karte, das Leuchtbild", "Sternenkarte"),
+        ("die (Sternen-)Karte, das Leuchtbild", "Leuchtbild"),
+        ("leuchte(t) hell!, blinke rot / blau!", "leuchte hell"),
+        ("leuchte(t) hell!, blinke rot / blau!", "leuchtet hell"),
+        ("leuchte(t) hell!, blinke rot / blau!", "blinke rot"),
+        ("leuchte(t) hell!, blinke rot / blau!", "blinke blau"),
+        ("der Mondstein, das Nachtjuwel", "Mondstein"),
+        ("der Mondstein, das Nachtjuwel", "das Nachtjuwel"),
+        ("drehen, kippen, stapeln, sortieren", "drehen stapeln"),
+        ("Zähle die Monde! Ordne die Sterne (nach Farben)!", "Ordne die Sterne"),
+        ("Der Würfel leuchtet. Das Papierboot dreht sich.", "Der Würfel leuchtet"),
+        ("Der Würfel leuchtet. Das Papierboot dreht sich.", "Das Papierboot dreht sich"),
+        (
+            "Ich zählte Monde, bevor der Roboter erwachte. "
+            "Die Laterne summte früher, als der Würfel landete.",
+            "Die Laterne summte früher als der Würfel landete",
+        ),
+        ("dreh links!, dreht rechts!", "dreh links"),
+        ("dreh links!, dreht rechts!", "dreht rechts"),
+        ("sondern, aber", "sondern"),
+        ("denn, aber, nämlich", "nämlich"),
+        ("dass, weil", "weil"),
+        ("obwohl, auch wenn", "auch wenn"),
+        ("als, nachdem", "nachdem"),
+        ("zwischen, während, unter", "unter"),
+        ("und auch, und", "und"),
+        ("weil, nachdem, obwohl, als", "obwohl"),
+        ("ob nicht, ob", "ob"),
+        ("wenn doch, hoffentlich", "hoffentlich"),
+        ("wenn auch, aber, obwohl", "obwohl"),
+        ("oder wenn, oder", "oder"),
+        ("zu (m. Inf.), dass", "dass"),
+        ("zu (m. Inf.), dass", "zu"),
+        ("dass keinesfalls, keinesfalls zu (m. Inf.)", "keinesfalls zu"),
+        ("sodass, damit, um zu (m. Inf.), dass", "damit"),
+        ("wirklich, tatsächlich, aber", "tatsächlich"),
+    ],
+)
+def test_all_german_meanings_are_required(expected: str, answer: str) -> None:
+    assert not match_text(answer, expected, language="de").correct
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "funkeln schimmern",
+        "schimmern, funkeln!",
+        "  funkeln   schimmern  ",
+        "funkeln bei Nacht; schimmern",
+    ],
+)
+def test_all_meanings_preserve_optional_formatting(answer: str) -> None:
+    assert match_text(answer, "funkeln (bei Nacht), schimmern", language="de").correct
+
+
+def test_missing_meanings_feedback_requires_complete_known_groups() -> None:
+    expected = "funkeln (bei Nacht), leise schimmern, glimmen"
+    result = match_text("glimmen funkeln", expected, language="de")
+    assert not result.correct
+    assert result.missing_meanings == ("leise schimmern",)
+    for answer in ["schimmern", "funkeln falsch", "funkelnschimmern", ""]:
+        assert not match_text(answer, expected, language="de").missing_meanings
+
+
+def test_slash_alternatives_still_require_other_meanings() -> None:
+    expected = "rot / blau, hell"
+    assert match_text("hell blau", expected, language="de").correct
+    assert match_text("rot hell", expected, language="de").correct
+    assert not match_text("blau", expected, language="de").correct
+
+
+def test_repeated_words_cannot_satisfy_multiple_meanings() -> None:
+    expected = "leise funkeln, leise schimmern"
+    assert not match_text("leise funkeln schimmern", expected, language="de").correct
+    assert match_text("leise funkeln leise schimmern", expected, language="de").correct

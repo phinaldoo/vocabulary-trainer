@@ -346,6 +346,8 @@ kbd { border: 1px solid rgb(0 0 0 / 12%); border-radius: 5px; background: rgb(25
 .rating-grid .again { color: var(--red); }
 .rating-grid .good, .rating-grid .easy { color: var(--green); }
 .continue-button { margin-top: 14px; }
+.next-card-button { grid-column: 1 / -1; justify-self: end; }
+.answer-result .next-card-button small { margin-top: 0; color: inherit; }
 .binary-rating { margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .binary-rating button { min-height: 62px; font-size: 13px; }
 .binary-rating button svg { width: 17px; }
