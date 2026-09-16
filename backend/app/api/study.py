@@ -124,6 +124,7 @@ async def check_answer(
         correct=result.correct,
         solution=item.solution_snapshot,
         match_kind=match_kind(result),
+        missing_meanings=list(result.missing_meanings),
     )
 
 
