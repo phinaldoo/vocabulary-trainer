@@ -277,9 +277,15 @@ function Study({ session, setSession, leave }: { session: StudySession; setSessi
 
   useEffect(() => {
     function shortcut(event: KeyboardEvent) {
-      if (!card || submitting) return;
+      if (!card || event.isComposing) return;
       const target = event.target instanceof Element ? event.target : null;
       const interactive = Boolean(target?.closest('input, textarea, select, button, a, [contenteditable="true"]'));
+      if (session.input_mode === 'typing' && checked && event.key === 'Enter' && (!interactive || target?.closest('.answer-result'))) {
+        event.preventDefault();
+        if (!submitting && !event.repeat) void rate(checked.correct ? 2 : 0);
+        return;
+      }
+      if (submitting || event.repeat) return;
       if (session.input_mode === 'reveal' && !revealed && !interactive && (event.key === ' ' || event.key === 'Enter')) {
         event.preventDefault(); void reveal();
       } else if (session.input_mode === 'reveal' && revealed && !interactive && ['1', '2'].includes(event.key)) {
@@ -319,7 +325,7 @@ function Study({ session, setSession, leave }: { session: StudySession; setSessi
         </div>
 
         {session.input_mode === 'typing' && !checked && <form className="answer-form" onSubmit={check}><label htmlFor="answer">{t('learn.yourAnswer')}</label><div><input ref={inputRef} id="answer" autoComplete="off" value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder={t('learn.answerPlaceholder', { language: answerLabel })} /><button className="button primary" disabled={!answer.trim() || submitting}>{t('learn.check')} <ArrowRight /></button></div></form>}
-        {session.input_mode === 'typing' && checked && <section className={`answer-result ${checked.correct ? 'correct' : 'incorrect'}`}><header className="answer-result-header">{checked.correct ? <Check /> : <X />}<div className="answer-result-copy"><strong>{checked.correct ? t('landing.correct') : checked.missing_meanings?.length ? t('learn.incomplete') : t('learn.notQuite')}</strong>{!checked.correct && !!checked.missing_meanings?.length && <span>{t('learn.missingMeanings')} <b lang={card.answer_language}>{checked.missing_meanings.join(' · ')}</b></span>}<span>{t('learn.solutionInline')} <b lang={card.answer_language}>{solution}</b></span></div></header><div className="rating-grid">{ratingOptions.map((option) => <button ref={option.value === 2 ? actionRef : undefined} type="button" key={option.value} className={option.tone} disabled={submitting} onClick={() => void rate(option.value)}>{option.value === 0 && <RotateCcw />}<span>{t(option.label as MessageKey)}<small>{t('learn.key', { key: option.key })}</small></span></button>)}</div></section>}
+        {session.input_mode === 'typing' && checked && <section className={`answer-result ${checked.correct ? 'correct' : 'incorrect'}`}><header className="answer-result-header">{checked.correct ? <Check /> : <X />}<div className="answer-result-copy"><strong>{checked.correct ? t('landing.correct') : checked.missing_meanings?.length ? t('learn.incomplete') : t('learn.notQuite')}</strong>{!checked.correct && !!checked.missing_meanings?.length && <span>{t('learn.missingMeanings')} <b lang={card.answer_language}>{checked.missing_meanings.join(' · ')}</b></span>}<span>{t('learn.solutionInline')} <b lang={card.answer_language}>{solution}</b></span></div></header><div className="rating-grid">{ratingOptions.map((option) => <button type="button" key={option.value} className={option.tone} disabled={submitting} onClick={() => void rate(option.value)}>{option.value === 0 && <RotateCcw />}<span>{t(option.label as MessageKey)}<small>{t('learn.key', { key: option.key })}</small></span></button>)}</div><button ref={actionRef} type="button" className="button primary next-card-button" disabled={submitting} onClick={() => void rate(checked.correct ? 2 : 0)}>{t('learn.nextCard')} <small>{t('learn.key', { key: 'Enter' })}</small><ArrowRight /></button></section>}
         {session.input_mode === 'reveal' && !revealed && <button className="button primary large continue-button" disabled={submitting} onClick={() => void reveal()}>{t('learn.flip')} <Layers3 /></button>}
         {session.input_mode === 'reveal' && revealed && <div className="binary-rating"><button ref={actionRef} className="button secondary no" disabled={submitting} onClick={() => void rate(false)}><X /> {t('learn.didNotKnow')} <small>1</small></button><button className="button secondary yes" disabled={submitting} onClick={() => void rate(true)}><Check /> {t('learn.didKnow')} <small>2</small></button></div>}
         {error && <p className="form-error centered" role="alert">{error}</p>}

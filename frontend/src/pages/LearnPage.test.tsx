@@ -205,6 +205,60 @@ describe('Lernmodus', () => {
     await waitFor(() => expect(screen.getAllByRole('button', { name: /know|knew/i })).toHaveLength(2));
   });
 
+  it.each([true, false])('advances with Enter after checking an answer (correct: %s)', async (correct) => {
+    const typingSession = {
+      ...session, input_mode: 'typing', total: 2,
+      cards: [session.cards[0], { ...session.cards[0], item_id: 'item-2', prompt: 'next-word' }],
+    };
+    mockApi.mockImplementation((path: string) => {
+      if (path === '/decks') return Promise.resolve([deck]);
+      if (path === '/study-sessions/session-1') return Promise.resolve(typingSession);
+      if (path.endsWith('/check')) return Promise.resolve({ correct, solution: 'qarilo-82', match_kind: null });
+      if (path.endsWith('/reviews')) return Promise.resolve({ reviewed: 1, correct_reviewed: Number(correct), complete: false });
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    const input = await screen.findByRole('textbox');
+    await user.type(input, 'qarilo-82{Enter}');
+    const next = await screen.findByRole('button', { name: /Next card/ });
+    await waitFor(() => expect(next).toHaveFocus());
+    expect(mockApi.mock.calls.filter(([path]) => path.endsWith('/reviews'))).toHaveLength(0);
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('heading', { name: 'next-word' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveFocus());
+    expect(screen.getByRole('textbox')).toHaveValue('');
+    const reviews = mockApi.mock.calls.filter(([path]) => path.endsWith('/reviews'));
+    expect(reviews).toHaveLength(1);
+    expect(JSON.parse(String(reviews[0]?.[1]?.body))).toMatchObject({
+      item_id: 'item-1', response: { type: 'typing', answer: 'qarilo-82', rating: correct ? 2 : 0 },
+    });
+  });
+
+  it.each(['Enter', 'click'] as const)('finishes the last card using %s without choosing difficulty', async (action) => {
+    mockApi.mockImplementation((path: string) => {
+      if (path === '/decks') return Promise.resolve([deck]);
+      if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, input_mode: 'typing' });
+      if (path.endsWith('/check')) return Promise.resolve({ correct: true, solution: 'qarilo-82', match_kind: 'exact' });
+      if (path.endsWith('/reviews')) return Promise.resolve({ reviewed: 1, correct_reviewed: 1, complete: true });
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await user.type(await screen.findByRole('textbox'), 'qarilo-82{Enter}');
+    const next = await screen.findByRole('button', { name: /Next card/ });
+    await waitFor(() => expect(next).toHaveFocus());
+    if (action === 'click') await user.click(next);
+    else {
+      screen.getByRole('button', { name: /Hard/ }).focus();
+      await user.keyboard('{Enter}');
+    }
+    expect(await screen.findByRole('button', { name: /New session/ })).toBeInTheDocument();
+    const reviews = mockApi.mock.calls.filter(([path]) => path.endsWith('/reviews'));
+    expect(reviews).toHaveLength(1);
+    expect(JSON.parse(String(reviews[0]?.[1]?.body)).response.rating).toBe(2);
+  });
+
   it('verwirft eine geladene Session, wenn die Session-ID aus der URL entfernt wird', async () => {
     const user = userEvent.setup();
     render(

@@ -307,6 +307,7 @@ export const messageRows = [
   ['learn.missingMeanings', 'Missing meanings:', '缺少的释义：', 'छूटे हुए अर्थ:', 'Significados que faltan:', 'Fehlende Bedeutungen:'],
   ['learn.notQuite', 'Not quite', '还不完全正确', 'अभी पूरी तरह सही नहीं', 'No del todo', 'Noch nicht ganz'],
   ['learn.solutionInline', 'The answer is:', '答案是：', 'उत्तर है:', 'La respuesta es:', 'Die Lösung lautet:'],
+  ['learn.nextCard', 'Next card', '下一张卡片', 'अगला कार्ड', 'Siguiente tarjeta', 'Nächste Karte'],
   ['learn.key', 'Key {{key}}', '按键 {{key}}', 'कुंजी {{key}}', 'Tecla {{key}}', 'Taste {{key}}'],
   ['learn.flip', 'Reveal card', '翻开卡片', 'कार्ड पलटें', 'Revelar tarjeta', 'Karte umdrehen'],
   ['learn.didNotKnow', 'Did not know', '不会', 'पता नहीं था', 'No la sabía', 'Nicht gewusst'],
