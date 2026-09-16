@@ -358,6 +358,7 @@ class AnswerCheckResponse(BaseModel):
     correct: bool
     solution: str
     match_kind: str | None
+    missing_meanings: list[str] = Field(default_factory=list)
 
 
 class RevealResponse(BaseModel):

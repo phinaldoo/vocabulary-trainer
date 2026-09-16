@@ -303,6 +303,8 @@ export const messageRows = [
   ['learn.yourAnswer', 'Your answer', '你的答案', 'आपका उत्तर', 'Tu respuesta', 'Deine Antwort'],
   ['learn.answerPlaceholder', 'Enter an answer in {{language}} …', '输入{{language}}答案…', '{{language}} में उत्तर लिखें…', 'Escribe una respuesta en {{language}}…', 'Antwort auf {{language}} eingeben …'],
   ['learn.check', 'Check', '检查', 'जाँचें', 'Comprobar', 'Prüfen'],
+  ['learn.incomplete', 'Not yet complete', '尚未完整', 'अभी अधूरा है', 'Aún incompleto', 'Noch nicht vollständig'],
+  ['learn.missingMeanings', 'Missing meanings:', '缺少的释义：', 'छूटे हुए अर्थ:', 'Significados que faltan:', 'Fehlende Bedeutungen:'],
   ['learn.notQuite', 'Not quite', '还不完全正确', 'अभी पूरी तरह सही नहीं', 'No del todo', 'Noch nicht ganz'],
   ['learn.solutionInline', 'The answer is:', '答案是：', 'उत्तर है:', 'La respuesta es:', 'Die Lösung lautet:'],
   ['learn.key', 'Key {{key}}', '按键 {{key}}', 'कुंजी {{key}}', 'Tecla {{key}}', 'Taste {{key}}'],

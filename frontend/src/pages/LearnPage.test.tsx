@@ -152,3 +152,23 @@ describe('Lernmodus', () => {
     expect(screen.queryByRole('heading', { name: 'nuvexa-47' })).not.toBeInTheDocument();
   });
 });
+
+
+it('shows missing meanings after checking an incomplete typed answer', async () => {
+  mockApi.mockImplementation((path: string) => {
+    if (path === '/decks') return Promise.resolve([deck]);
+    if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, input_mode: 'typing' });
+    if (path.endsWith('/check')) return Promise.resolve({
+      correct: false, solution: 'funkeln (bei Nacht), schimmern',
+      match_kind: null, missing_meanings: ['schimmern'],
+    });
+    throw new Error(`Unexpected API call: ${path}`);
+  });
+  const user = userEvent.setup();
+  render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+  await user.type(await screen.findByRole('textbox'), 'funkeln');
+  await user.click(screen.getByRole('button', { name: /Check/ }));
+  expect(await screen.findByText('Not yet complete')).toBeInTheDocument();
+  expect(screen.getByText('Missing meanings:')).toBeInTheDocument();
+  expect(screen.getByText('schimmern')).toBeInTheDocument();
+});
