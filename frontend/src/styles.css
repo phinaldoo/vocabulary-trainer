@@ -334,8 +334,8 @@ kbd { border: 1px solid rgb(0 0 0 / 12%); border-radius: 5px; background: rgb(25
 .answer-result.correct { background: var(--green-soft); color: var(--green); }
 .answer-result.incorrect { background: var(--red-soft); color: var(--red); }
 .answer-result strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
-.answer-result-copy > span { display: block; margin-top: 7px; color: var(--ink); font: 500 18px/1.25 Georgia, serif; overflow-wrap: anywhere; }
-.answer-result-copy b { font-weight: 600; }
+.answer-result-copy > span { display: block; margin-top: 7px; color: var(--ink); font: 400 18px/1.25 Georgia, serif; overflow-wrap: anywhere; }
+.answer-result-copy b { font-weight: 700; }
 .answer-result p { margin: 4px 0 0; color: var(--ink); font: 500 19px Georgia, serif; }
 .answer-result small { display: block; margin-top: 4px; color: #6d9480; font-size: 9px; }
 .rating-grid { margin-top: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }

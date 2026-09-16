@@ -73,6 +73,29 @@ describe('Lernmodus', () => {
     });
   });
 
+  it.each([
+    { answer: 'gehen', solution: 'gehen, laufen (zu Fuß)', bold: ['gehen'] },
+    { answer: '  GEHEN  ', solution: 'gehen, gehen lassen', bold: ['gehen', 'gehen'] },
+    { answer: 'zu   Fuß', solution: 'gehen (zu Fuß)', bold: ['zu Fuß'] },
+    { answer: 'a+b', solution: 'a+b; ab', bold: ['a+b'] },
+    { answer: 'falsch', solution: 'gehen, laufen', bold: [] },
+  ])('highlights only the entered text in the solution: $answer', async ({ answer, solution, bold }) => {
+    const defaultImplementation = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => {
+      if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, input_mode: 'typing' });
+      if (path.endsWith('/check')) return Promise.resolve({ correct: bold.length > 0, solution, match_kind: null });
+      return defaultImplementation(path, options);
+    });
+    const user = userEvent.setup();
+    const { container } = render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await user.type(await screen.findByRole('textbox', { name: 'Your answer' }), answer);
+    await user.click(screen.getByRole('button', { name: 'Check' }));
+    await screen.findByText(/The answer is:/);
+    const displayedSolution = container.querySelector('.answer-result-copy span[lang]');
+    expect(displayedSolution?.textContent).toBe(solution);
+    expect(Array.from(displayedSolution!.querySelectorAll('b'), (element) => element.textContent)).toEqual(bold);
+  });
+
   it.each(['random', 'adaptive'] as const)('starts %s practice across all sections', async (selectionMode) => {
     const user = userEvent.setup();
     render(<I18nProvider><MemoryRouter initialEntries={['/lernen?deck=deck-1&section=section-49']}><LearnPage /></MemoryRouter></I18nProvider>);
