@@ -307,9 +307,7 @@ async def test_admin_shared_catalogue_study_snapshots_and_account_isolation() ->
                 )
                 assert replay.json() == reviewed.json()
 
-                difficult = await admin.get(
-                    f"/api/v1/cards?deck_id={deck['id']}&state=difficult"
-                )
+                difficult = await admin.get(f"/api/v1/cards?deck_id={deck['id']}&state=difficult")
                 assert difficult.status_code == 200
                 assert difficult.json()["total"] == 1
 
@@ -501,3 +499,76 @@ async def test_matcher_change_revalidates_existing_cards() -> None:
 
             unchanged = await admin.get(f"/api/v1/admin/decks/{deck['id']}")
             assert unchanged.json()["front_matcher"] == "generic-v1"
+
+
+@pytest.mark.asyncio
+async def test_typing_requires_all_german_meanings_and_reports_missing_ones() -> None:
+    app = create_app(_settings())
+    async with (
+        app.router.lifespan_context(app),
+        AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client,
+    ):
+        await _register(client, "meanings@example.com")
+        headers = _mutation_headers(client)
+        created = await client.post(
+            "/api/v1/admin/decks",
+            headers=headers,
+            json={
+                "slug": "all-meanings",
+                "title": "All meanings",
+                "front_label": "Prompt",
+                "back_label": "Deutsch",
+                "front_language": "en",
+                "back_language": "de",
+                "front_matcher": "generic-v1",
+                "back_matcher": "german-v1",
+            },
+        )
+        assert created.status_code == 201, created.text
+        deck_id = created.json()["id"]
+        card = await client.post(
+            f"/api/v1/admin/decks/{deck_id}/cards",
+            headers=headers,
+            json={
+                "stable_key": "sparkle",
+                "section_id": None,
+                "sort_order": 1,
+                "front_text": "sparkle",
+                "back_text": "funkeln (bei Nacht), schimmern",
+                "front_answers": [],
+                "back_answers": [],
+                "metadata": {},
+            },
+        )
+        assert card.status_code == 201, card.text
+        published = await client.patch(
+            f"/api/v1/admin/decks/{deck_id}/status",
+            headers=headers,
+            json={"status": "published"},
+        )
+        assert published.status_code == 200, published.text
+        started = await client.post(
+            "/api/v1/study-sessions",
+            headers=headers,
+            json={
+                "deck_id": deck_id,
+                "direction": "forward",
+                "input_mode": "typing",
+                "limit": 1,
+            },
+        )
+        assert started.status_code == 200, started.text
+        session = started.json()
+        for answer, correct, missing in [
+            ("funkeln", False, ["schimmern"]),
+            ("schimmern; funkeln!", True, []),
+            ("funkeln falsch", False, []),
+        ]:
+            checked = await client.post(
+                f"/api/v1/study-sessions/{session['id']}/check",
+                headers=headers,
+                json={"item_id": session["cards"][0]["item_id"], "answer": answer},
+            )
+            assert checked.status_code == 200, checked.text
+            assert checked.json()["correct"] is correct
+            assert checked.json()["missing_meanings"] == missing
