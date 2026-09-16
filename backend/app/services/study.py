@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import random
 import uuid
 from datetime import UTC, datetime
 
@@ -44,6 +45,44 @@ def side_snapshot(card: Card, deck: Deck, direction: str) -> dict[str, object]:
         "answer_language": deck.front_language,
         "matcher_profile": deck.front_matcher,
     }
+
+
+def adaptive_weight(progress: UserCardProgress | None) -> float:
+    """Favor unknown/hard cards; successful repetition lowers, never removes, probability."""
+    if progress is None:
+        return 4.0
+    if progress.last_rating == 0:
+        return 8.0
+    if progress.last_rating == 1:
+        return 6.0
+    return max(0.25, 4.0 / (1 + progress.repetitions))
+
+
+def random_selection(
+    cards: list[Card],
+    progress_map: dict[tuple[uuid.UUID, str], UserCardProgress],
+    payload: StudySessionCreate,
+) -> list[tuple[Card, str, int]]:
+    # An exponential race samples without replacement in weighted random order.
+    # In mixed mode, average both directions for card selection, then favor the
+    # weaker direction. Each vocabulary appears at most once in a session.
+    candidates = []
+    for card in cards:
+        directions = ["forward", "reverse"] if payload.direction == "mixed" else [payload.direction]
+        weights = [
+            adaptive_weight(progress_map.get((card.id, direction)))
+            if payload.selection_mode == "adaptive"
+            else 1.0
+            for direction in directions
+        ]
+        direction = random.choices(directions, weights=weights, k=1)[0]
+        progress = progress_map.get((card.id, direction))
+        priority = random.expovariate(sum(weights) / len(weights))
+        candidates.append((priority, card, direction, progress.version if progress else 0))
+    candidates.sort(key=lambda candidate: candidate[0])
+    return [
+        (card, direction, version) for _, card, direction, version in candidates[: payload.limit]
+    ]
 
 
 async def create_study_session(
@@ -100,28 +139,31 @@ async def create_study_session(
     selected: list[tuple[Card, str, int]] = []
     selected_keys: set[tuple[uuid.UUID, str]] = set()
     selected_card_ids: set[uuid.UUID] = set()
-    for row in due:
-        card = by_id.get(row.card_id)
-        key = (row.card_id, row.direction)
-        if not card or key in selected_keys or card.id in selected_card_ids:
-            continue
-        selected.append((card, row.direction, row.version))
-        selected_keys.add(key)
-        selected_card_ids.add(card.id)
-        if len(selected) == payload.limit:
-            break
-
-    if len(selected) < payload.limit:
-        for card in cards:
-            direction = direction_for(card, payload.direction)
-            key = (card.id, direction)
-            if card.id in selected_card_ids or key in selected_keys or key in progress_map:
+    if payload.selection_mode == "scheduled":
+        for row in due:
+            card = by_id.get(row.card_id)
+            key = (row.card_id, row.direction)
+            if not card or key in selected_keys or card.id in selected_card_ids:
                 continue
-            selected.append((card, direction, 0))
+            selected.append((card, row.direction, row.version))
             selected_keys.add(key)
             selected_card_ids.add(card.id)
             if len(selected) == payload.limit:
                 break
+
+        if len(selected) < payload.limit:
+            for card in cards:
+                direction = direction_for(card, payload.direction)
+                key = (card.id, direction)
+                if card.id in selected_card_ids or key in selected_keys or key in progress_map:
+                    continue
+                selected.append((card, direction, 0))
+                selected_keys.add(key)
+                selected_card_ids.add(card.id)
+                if len(selected) == payload.limit:
+                    break
+    else:
+        selected = random_selection(cards, progress_map, payload)
 
     study_session = StudySession(
         user_id=user.id,
@@ -129,6 +171,7 @@ async def create_study_session(
         section_id=payload.section_id,
         direction=payload.direction,
         input_mode=payload.input_mode,
+        selection_mode=payload.selection_mode,
         target_count=payload.limit,
         completed_at=now if not selected else None,
     )
@@ -220,6 +263,7 @@ async def get_study_session(
         if item.reviewed_at is None
     ]
     return StudySessionPublic(
+        selection_mode=study_session.selection_mode,
         id=study_session.id,
         deck_id=deck.id,
         deck_title=deck.title,

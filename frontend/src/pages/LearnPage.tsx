@@ -17,7 +17,7 @@ import { api, ApiError, createIdempotencyKey } from '../api/client';
 import { useResource } from '../api/useResource';
 import { useAuth } from '../auth/AuthContext';
 import { PageError, PageLoading } from '../components/PageState';
-import type { Deck, Direction, InputMode, ReviewResult, Section, StudySession } from '../types';
+import type { Deck, Direction, InputMode, ReviewResult, Section, SelectionMode, StudySession } from '../types';
 import { useI18n } from '../i18n';
 import type { MessageKey } from '../i18n/messages';
 
@@ -73,6 +73,7 @@ type StartConfig = {
   section_id: string | null;
   direction: Direction;
   input_mode: InputMode;
+  selection_mode: SelectionMode;
   limit: number;
 };
 
@@ -91,6 +92,10 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
   const [sectionId, setSectionId] = useState<string | null>(requestedSection ?? user?.selected_section_id ?? null);
   const [direction, setDirection] = useState<Direction>(user?.direction ?? 'forward');
   const [mode, setMode] = useState<InputMode>(user?.input_mode ?? 'typing');
+  const requestedSelection = params.get('selection');
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>(
+    requestedSelection === 'random' || requestedSelection === 'adaptive' ? requestedSelection : 'scheduled',
+  );
   const [limit, setLimit] = useState(user?.daily_goal ?? 12);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState('');
@@ -107,7 +112,7 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
     setStarting(true);
     setError('');
     try {
-      await start({ deck_id: deck.id, section_id: sectionId, direction, input_mode: mode, limit });
+      await start({ deck_id: deck.id, section_id: sectionId, direction, input_mode: mode, selection_mode: selectionMode, limit });
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : t('learn.startError'));
     } finally {
@@ -160,11 +165,13 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
         <article className="setup-section panel compact-settings">
           <div className="setup-heading"><span>3</span><div><h2>{t('learn.directionSize')}</h2><p>{t('learn.matchGoal')}</p></div></div>
           <label><span>{t('settings.direction')}</span><div className="select-wrap"><select value={direction} onChange={(event) => setDirection(event.target.value as Direction)}><option value="forward">{deck.front_label} → {deck.back_label}</option><option value="reverse">{deck.back_label} → {deck.front_label}</option><option value="mixed">{t('settings.mixed')}</option></select><ChevronDown /></div></label>
+          <label><span>{t('learn.selectionMode')}</span><div className="select-wrap"><select aria-describedby="selection-help" value={selectionMode} onChange={(event) => setSelectionMode(event.target.value as SelectionMode)}>{(['scheduled', 'random', 'adaptive'] as const).map((value) => <option key={value} value={value}>{t(`learn.selection.${value}`)}</option>)}</select><ChevronDown /></div></label>
+          <p id="selection-help">{t(`learn.selectionHelp.${selectionMode}`)} {t('learn.randomSections')}</p>
           <label><span>{t('learn.cardCount')}</span><div className="select-wrap"><select value={limit} onChange={(event) => setLimit(Number(event.target.value))}>{[5, 10, 12, 20, 30, 50].map((value) => <option key={value} value={value}>{t(value === 1 ? 'common.cardsOne' : 'common.cardsMany', { count: number(value) })}</option>)}</select><ChevronDown /></div></label>
         </article>
       </section>
       {error && <p className="form-error centered" role="alert">{error}</p>}
-      <div className="setup-footer"><div><strong>{deck.title}</strong><span> · {sectionTitle ?? t('common.allSections')} · {mode === 'typing' ? t('learn.modeTyping') : t('settings.revealCard')} · {t(limit === 1 ? 'common.cardsOne' : 'common.cardsMany', { count: number(limit) })}</span></div><button className="button primary large" type="button" disabled={starting || sections.loading} onClick={() => void begin()}>{starting ? t('learn.preparing') : t('dashboard.start')} {!starting && <ArrowRight />}</button></div>
+      <div className="setup-footer"><div><strong>{deck.title}</strong><span> · {sectionTitle ?? t('common.allSections')} · {t(`learn.selection.${selectionMode}`)} · {mode === 'typing' ? t('learn.modeTyping') : t('settings.revealCard')} · {t(limit === 1 ? 'common.cardsOne' : 'common.cardsMany', { count: number(limit) })}</span></div><button className="button primary large" type="button" disabled={starting || sections.loading} onClick={() => void begin()}>{starting ? t('learn.preparing') : t('dashboard.start')} {!starting && <ArrowRight />}</button></div>
     </main>
   );
 }
@@ -361,6 +368,7 @@ export function LearnPage() {
     const search = new URLSearchParams();
     if (session?.deck_id) search.set('deck', session.deck_id);
     if (session?.section_id) search.set('section', session.section_id);
+    if (session?.selection_mode) search.set('selection', session.selection_mode);
     setParams(search, { replace: true });
   }
 

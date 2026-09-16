@@ -73,6 +73,33 @@ describe('Lernmodus', () => {
     });
   });
 
+  it.each(['random', 'adaptive'] as const)('starts %s practice across all sections', async (selectionMode) => {
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?deck=deck-1&section=section-49']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await screen.findByRole('button', { name: /All sections/ });
+    await user.click(screen.getByRole('button', { name: /All sections/ }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Card selection' }), selectionMode);
+    await user.click(screen.getByRole('button', { name: /Start learning/ }));
+    await screen.findByRole('heading', { name: 'nuvexa-47' });
+    const call = mockApi.mock.calls.find(([path]) => path === '/study-sessions');
+    expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({
+      deck_id: 'deck-1', section_id: null, selection_mode: selectionMode,
+    });
+  });
+
+  it('keeps adaptive selection when starting another session', async () => {
+    mockApi.mockImplementation((path: string) => {
+      if (path === '/decks') return Promise.resolve([deck]);
+      if (path === '/sections?deck_id=deck-1') return Promise.resolve([section]);
+      if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, selection_mode: 'adaptive', complete: true, cards: [] });
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await user.click(await screen.findByRole('button', { name: /New session/ }));
+    expect(await screen.findByRole('combobox', { name: 'Card selection' })).toHaveValue('adaptive');
+  });
+
   it('bindet Deck und Abschnitt an die Session und zeigt die Lösung erst nach dem Wenden', async () => {
     const user = userEvent.setup();
     render(

@@ -197,3 +197,23 @@ make clean-db CONFIRM=delete-all-local-data
 Vocabulary Trainer's source code is available under the [MIT License](LICENSE). See
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for included third-party
 notices.
+
+### Random vocabulary practice
+
+In the learning setup, choose **All sections** to mix vocabulary across chapters in
+one deck, or select a section to practice within it. Under **Card selection**, choose:
+
+- **Due and new cards**: the existing schedule, followed by unseen cards.
+- **Fully random**: every active card in the selection has an equal chance,
+  including cards that are not due yet.
+- **Adaptive random**: new and difficult cards appear more often, while repeatedly
+  correct cards appear less often. Every card retains a chance of being selected.
+
+Random sessions sample without replacement, up to the requested count. Adaptive
+weights use your saved progress per translation direction: 8 for the last answer
+rated Again/incorrect, 6 for Hard, 4 for unseen cards, and `max(0.25, 4 / (1 +
+repetitions))` for successful cards. Mixed direction considers both directions and
+favors the weaker one. Answers update the same learning progress as scheduled
+practice; subsequent sessions use the updated weights. Resuming a session preserves
+its original selection and order. The API accepts `selection_mode` as `scheduled`
+(default), `random`, or `adaptive` on `POST /api/v1/study-sessions`.
