@@ -16,6 +16,7 @@ from app.models import (
     StudySession,
     StudySessionItem,
     User,
+    UserCardPreference,
     UserCardProgress,
 )
 from app.schemas import StudyCard, StudySessionCreate, StudySessionPublic
@@ -62,6 +63,7 @@ def random_selection(
     cards: list[Card],
     progress_map: dict[tuple[uuid.UUID, str], UserCardProgress],
     payload: StudySessionCreate,
+    difficulties: dict[uuid.UUID, str] | None = None,
 ) -> list[tuple[Card, str, int]]:
     # An exponential race samples without replacement in weighted random order.
     # In mixed mode, average both directions for card selection, then favor the
@@ -75,6 +77,11 @@ def random_selection(
             else 1.0
             for direction in directions
         ]
+        if payload.selection_mode == "adaptive":
+            multiplier = {"easy": 0.5, "normal": 1.0, "hard": 2.0}.get(
+                (difficulties or {}).get(card.id, "auto"), 1.0,
+            )
+            weights = [weight * multiplier for weight in weights]
         direction = random.choices(directions, weights=weights, k=1)[0]
         progress = progress_map.get((card.id, direction))
         priority = random.expovariate(sum(weights) / len(weights))
@@ -164,7 +171,12 @@ async def create_study_session(
                 if len(selected) == payload.limit:
                     break
     else:
-        selected = random_selection(cards, progress_map, payload)
+        preferences = await db.scalars(select(UserCardPreference).where(
+            UserCardPreference.user_id == user.id, UserCardPreference.card_id.in_(ids),
+        ))
+        selected = random_selection(
+            cards, progress_map, payload, {row.card_id: row.difficulty for row in preferences},
+        )
 
     study_session = StudySession(
         user_id=user.id,
