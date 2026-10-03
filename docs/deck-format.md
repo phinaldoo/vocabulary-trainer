@@ -60,7 +60,12 @@ Each side declares one matcher:
 - `generic-v1`: Unicode-aware, case-insensitive exact matching after punctuation
   and whitespace normalization. Put accepted alternatives in `answers`.
 - `german-v1`: German dictionary-form matching with article, parenthesis, and
-  common keyboard-spelling handling.
+  common keyboard-spelling handling. All comma-/semicolon-separated meanings and
+  separate utterances are required, in any order. Slash variants remain alternatives;
+  parenthetical content, articles, punctuation, and extra whitespace are optional.
+  Word boundaries are still required. Incomplete answers report missing meanings.
+  Explicit `answers` entries remain alternative complete answer specifications;
+  do not use them to list individual meanings of a multi-meaning answer.
 - `latin-v1`: Latin principal-part and construction matching used by migrated
   legacy decks.
 
@@ -68,3 +73,24 @@ Language values are BCP 47-style tags such as `en`, `de`, `la`, or `pt-BR`.
 Metadata is an arbitrary JSON object shown as supplemental card information.
 
 The complete working example is in `examples/synthetic-demo.json`.
+
+## Vocabulary details
+
+Use these optional text fields inside each card's `metadata`, in display order:
+`gender`, `part_of_speech`, `additional_info`, `additional_info_2`.
+For example:
+
+```json
+"metadata": {
+  "gender": "f.",
+  "part_of_speech": "noun",
+  "additional_info": "First declension",
+  "additional_info_2": "Example or memory aid"
+}
+```
+
+The administrator card editor provides a separate input for each field. Learners see
+all populated fields on catalogue cards, in details, and during both study modes.
+Missing fields are omitted. Existing `genus`, `partOfSpeech`, `wortart`, `info`,
+`note`, `zusatzinformation`, and `zusatzinformation2` keys remain readable; editing
+saves the four canonical keys. Other metadata is preserved in the advanced JSON field.
