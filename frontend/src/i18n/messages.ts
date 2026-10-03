@@ -2,6 +2,12 @@ import type { UiLanguage } from '../types';
 
 // Key, English, Simplified Chinese, Hindi, Spanish, German.
 export const messageRows = [
+  ["metadata.gender", "Gender", "性", "लिंग", "Género", "Genus"],
+  ["metadata.partOfSpeech", "Part of speech", "词性", "शब्द भेद", "Categoría gramatical", "Wortart"],
+  ["metadata.additionalInfo", "Additional information", "附加信息", "अतिरिक्त जानकारी", "Información adicional", "Zusatzinformation"],
+  ["metadata.additionalInfo2", "Additional information 2", "附加信息 2", "अतिरिक्त जानकारी 2", "Información adicional 2", "Zusatzinformation 2"],
+  ["metadata.extra", "Other metadata (JSON)", "其他元数据（JSON）", "अन्य मेटाडेटा (JSON)", "Otros metadatos (JSON)", "Weitere Metadaten (JSON)"],
+
   ["learn.acceptAnswer", "My answer was correct", "我的答案是正确的", "मेरा उत्तर सही था", "Mi respuesta era correcta", "Meine Antwort war richtig"],
   ["learn.selectionMode", "Card selection", "卡片选择", "कार्ड चयन", "Selección de tarjetas", "Kartenauswahl"],
   ["learn.selection.scheduled", "Due and new cards", "到期和新卡片", "नियत और नए कार्ड", "Tarjetas pendientes y nuevas", "Fällige und neue Karten"],

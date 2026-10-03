@@ -229,6 +229,22 @@ describe('Lernmodus', () => {
     await waitFor(() => expect(screen.getAllByRole('button', { name: /know|knew/i })).toHaveLength(2));
   });
 
+  it.each(['typing', 'reveal'])('shows every metadata field in %s mode', async (mode) => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => {
+      if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, input_mode: mode,
+        cards: [{ ...session.cards[0], metadata: { gender: 'f.', part_of_speech: 'noun', additional_info: 'Note one', additional_info_2: 'Note two' } }],
+      });
+      return original(path, options);
+    });
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    expect(await screen.findByText('Note two')).toBeInTheDocument();
+    expect(screen.getByText('Gender')).toBeInTheDocument();
+    expect(screen.getByText('Part of speech')).toBeInTheDocument();
+    expect(screen.getByText('Additional information')).toBeInTheDocument();
+    expect(screen.getByText('Additional information 2')).toBeInTheDocument();
+  });
+
   it('accepts a rejected answer explicitly and includes it in completion accuracy', async () => {
     const original = mockApi.getMockImplementation()!;
     mockApi.mockImplementation((path: string, options?: RequestInit) => {
