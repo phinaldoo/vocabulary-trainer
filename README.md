@@ -197,3 +197,76 @@ make clean-db CONFIRM=delete-all-local-data
 Vocabulary Trainer's source code is available under the [MIT License](LICENSE). See
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for included third-party
 notices.
+
+### Random vocabulary practice
+
+In the learning setup, choose **All sections** to mix vocabulary across chapters in
+one deck, or toggle individual sections to practice any combination. The selection is saved
+for your next session and restored when you resume or repeat a session. Selecting
+**All sections** or deselecting the last selected section resets the filter. Under **Card selection**, choose:
+
+- **Due and new cards**: the existing schedule, followed by unseen cards.
+- **Fully random**: every active card in the selection has an equal chance,
+  including cards that are not due yet.
+- **Adaptive random**: new and difficult cards appear more often, while repeatedly
+  correct cards appear less often. Every card retains a chance of being selected.
+
+Random sessions sample without replacement, up to the requested count. Adaptive
+weights use your saved progress per translation direction: 8 for the last answer
+rated Again/incorrect, 6 for Hard, 4 for unseen cards, and `max(0.25, 4 / (1 +
+repetitions))` for successful cards. Mixed direction considers both directions and
+favors the weaker one. Answers update the same learning progress as scheduled
+practice; subsequent sessions use the updated weights. Resuming a session preserves
+its original selection and order. The API accepts `selection_mode` as `scheduled`
+(default), `random`, or `adaptive` on `POST /api/v1/study-sessions`.
+
+The study API accepts `section_ids` as an array of section UUIDs; an empty array
+means all sections. IDs are deduplicated and must belong to the published deck
+and active sections. The legacy `section_id` remains supported. Conflicting
+singular and plural selections are rejected. Session responses include
+`section_ids` and `section_titles`. Apply `alembic upgrade head` when upgrading.
+
+### All vocabulary
+
+The catalogue offers cards and a sortable list, with search and section/status filters.
+Sorting applies to the entire selection before pagination: either language, chapter,
+gender, part of speech, both additional information fields, difficulty, or learning status.
+The view, filters, sorting, and current page are preserved in the URL.
+
+Each learner can set a word's difficulty to Automatic, Easy, Normal, or Hard in either
+view or the detail dialog. This personal setting does not create a review or change
+another learner's progress. Adaptive random practice multiplies the normal weight by
+0.5 / 1 / 2 for Easy / Normal / Hard; Automatic uses review history alone. Fully random
+practice stays uniform. Apply `alembic upgrade head` to create the preference table.
+
+The chosen selection mode is saved with your account when you start a session and
+can also be changed in Settings. The dashboard's **Random practice · all chapters**
+shortcut opens fully random practice across the current deck, independent of a
+previous chapter filter. Explicit study links override the saved mode. Uniform
+random practice samples directly from all eligible cards, then stores that shuffled
+selection so resuming cannot silently reorder a session.
+
+### Repeat mistakes
+
+Scheduled practice starts with the learner's last incorrect/Again answers, including
+ones whose ten-minute interval has not elapsed, before due and unseen cards. Select
+**Mistakes only** to practice just those words, or use **Repeat mistakes** after a
+session. Both paths respect the chosen deck, chapters and translation direction;
+a vocabulary appears at most once per session. A subsequent correct/Good answer
+(including an explicitly accepted typing answer) removes it from the mistake queue.
+Fully random and adaptive random keep their own sampling rules.
+
+### Reset learning progress
+
+Settings offers **Reset progress…** separately from account deletion. Choose a deck
+or all decks, enter your password and confirm the scope. This removes only your
+progress, review statistics, learning sessions and personal difficulty preferences
+in that scope. Your login, profile, favorites, settings and shared vocabulary remain.
+Other users are unaffected. Old learning sessions become invalid, including pending
+review retries. Reset and learning writes use the same per-user PostgreSQL lock so
+a concurrent review cannot restore progress after the reset completes.
+
+To verify reset/review transaction ordering on PostgreSQL, migrate a dedicated test
+database, set `TEST_POSTGRES_URL` to its SQLAlchemy async URL, and run
+`pytest tests/test_progress_reset_postgres.py`. This optional test creates and removes
+its own test account/deck and is skipped when that variable is absent.

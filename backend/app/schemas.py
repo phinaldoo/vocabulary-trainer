@@ -19,9 +19,11 @@ Password = Annotated[str, StringConstraints(min_length=10, max_length=128)]
 Direction = Literal["forward", "reverse", "mixed"]
 CardDirection = Literal["forward", "reverse"]
 InputMode = Literal["typing", "reveal"]
+SelectionMode = Literal["scheduled", "random", "adaptive", "mistakes"]
 UiLanguage = Literal["en", "zh-Hans", "hi", "es", "de"]
 DeckStatus = Literal["draft", "published", "archived"]
 MatcherProfile = Literal["generic-v1", "german-v1", "latin-v1"]
+Difficulty = Literal["auto", "easy", "normal", "hard"]
 CardStatus = Literal["new", "learning", "familiar", "mastered", "difficult"]
 AnswerText = Annotated[
     str,
@@ -78,8 +80,10 @@ class UserPublic(BaseModel):
     daily_goal: int
     direction: Direction
     input_mode: InputMode
+    selection_mode: SelectionMode = "scheduled"
     selected_deck_id: uuid.UUID | None
     selected_section_id: uuid.UUID | None
+    selected_section_ids: list[uuid.UUID] | None = None
     created_at: datetime
 
 
@@ -125,8 +129,10 @@ class SettingsUpdate(BaseModel):
     direction: Direction
     input_mode: InputMode
     language: UiLanguage | None = None
+    selection_mode: SelectionMode | None = None
     selected_deck_id: uuid.UUID | None = None
     selected_section_id: uuid.UUID | None = None
+    selected_section_ids: list[uuid.UUID] | None = Field(default=None, max_length=1000)
 
 
 class AccountProfileUpdate(BaseModel):
@@ -140,6 +146,11 @@ class AccountDeleteRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     password: Annotated[str, StringConstraints(min_length=1, max_length=128)]
+
+
+class ProgressResetRequest(AccountDeleteRequest):
+    deck_id: uuid.UUID | None = None
+    confirm: Literal[True]
 
 
 class LanguageUpdate(BaseModel):
@@ -264,6 +275,7 @@ class CardPublic(BaseModel):
     active: bool
     favorite: bool = False
     status: CardStatus = "new"
+    difficulty: Difficulty = "auto"
 
 
 class PaginatedCards(BaseModel):
@@ -272,6 +284,11 @@ class PaginatedCards(BaseModel):
     page_size: int
     total: int
     pages: int
+
+
+class DifficultyUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    difficulty: Difficulty
 
 
 class CardCreate(BaseModel):
@@ -305,9 +322,22 @@ class StudySessionCreate(BaseModel):
 
     deck_id: uuid.UUID
     section_id: uuid.UUID | None = None
+    section_ids: list[uuid.UUID] | None = Field(default=None, max_length=1000)
     direction: Direction
     input_mode: InputMode
+    selection_mode: SelectionMode = "scheduled"
     limit: int = Field(ge=1, le=50)
+
+    @model_validator(mode="after")
+    def normalize_sections(self) -> StudySessionCreate:
+        if self.section_ids is not None:
+            self.section_ids = list(dict.fromkeys(self.section_ids))
+            if self.section_id is not None and self.section_ids != [self.section_id]:
+                raise ValueError("Use either section_id or section_ids, not conflicting selections")
+        else:
+            self.section_ids = [self.section_id] if self.section_id else []
+        self.section_id = self.section_ids[0] if len(self.section_ids) == 1 else None
+        return self
 
 
 class StudyCard(BaseModel):
@@ -326,10 +356,13 @@ class StudyCard(BaseModel):
 
 
 class StudySessionPublic(BaseModel):
+    selection_mode: SelectionMode
     id: uuid.UUID
     deck_id: uuid.UUID
     deck_title: str
     section_id: uuid.UUID | None
+    section_ids: list[uuid.UUID]
+    section_titles: list[str]
     section_title: str | None
     front_label: str
     back_label: str
@@ -355,6 +388,7 @@ class AnswerCheckResponse(BaseModel):
     correct: bool
     solution: str
     match_kind: str | None
+    missing_meanings: list[str] = Field(default_factory=list)
 
 
 class RevealResponse(BaseModel):
@@ -365,6 +399,7 @@ class TypingReview(BaseModel):
     type: Literal["typing"]
     answer: AnswerText
     rating: int = Field(ge=0, le=3)
+    accept_as_correct: bool = False
 
 
 class FlipReview(BaseModel):

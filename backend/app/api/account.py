@@ -5,15 +5,17 @@ from starlette.concurrency import run_in_threadpool
 
 from app.dependencies import CurrentAuthWithCsrf, Database, SettingsDependency
 from app.errors import ApiError
-from app.models import Deck, Section, User
+from app.models import Card, Deck, Section, StudySession, User, UserCardPreference, UserCardProgress
 from app.schemas import (
     AccountDeleteRequest,
     AccountProfileUpdate,
     LanguageUpdate,
+    ProgressResetRequest,
     SettingsUpdate,
     UserPublic,
 )
 from app.security import clear_auth_cookies, normalize_email, verify_password
+from app.services.study import lock_learning_state
 
 router = APIRouter(prefix="/account", tags=["account"])
 
@@ -61,6 +63,8 @@ async def update_settings(
     user.daily_goal = payload.daily_goal
     user.direction = payload.direction
     user.input_mode = payload.input_mode
+    if payload.selection_mode is not None:
+        user.selection_mode = payload.selection_mode
     if payload.language is not None:
         user.language = payload.language
     if payload.selected_deck_id is not None:
@@ -82,8 +86,29 @@ async def update_settings(
         )
         if not section:
             raise ApiError(404, "section_not_found", "Dieser Abschnitt gehört nicht zum Deck.")
+    if payload.selected_section_ids is not None:
+        section_ids = list(dict.fromkeys(payload.selected_section_ids))
+        if payload.selected_section_id and section_ids != [payload.selected_section_id]:
+            raise ApiError(422, "invalid_selection", "Widersprüchliche Abschnittsauswahl.")
+        valid_ids = set(await db.scalars(select(Section.id).where(
+            Section.id.in_(section_ids),
+            Section.deck_id == payload.selected_deck_id,
+            Section.active.is_(True),
+        )))
+        if valid_ids != set(section_ids):
+            raise ApiError(404, "section_not_found", "Dieser Abschnitt gehört nicht zum Deck.")
+        user.selected_section_ids = [str(value) for value in section_ids]
+        user.selected_section_id = section_ids[0] if len(section_ids) == 1 else None
+    else:
+        # Legacy clients may update unrelated preferences without knowing about lists.
+        if (user.selected_deck_id, user.selected_section_id) != (
+            payload.selected_deck_id, payload.selected_section_id
+        ):
+            user.selected_section_ids = (
+                [str(payload.selected_section_id)] if payload.selected_section_id else []
+            )
+        user.selected_section_id = payload.selected_section_id
     user.selected_deck_id = payload.selected_deck_id
-    user.selected_section_id = payload.selected_section_id
     await db.commit()
     await db.refresh(user)
     response.headers["Cache-Control"] = "private, no-store"
@@ -125,3 +150,35 @@ async def delete_account(
     await db.execute(delete(User).where(User.id == auth.user.id))
     await db.commit()
     clear_auth_cookies(response, settings)
+
+
+@router.post("/progress/reset", status_code=status.HTTP_204_NO_CONTENT)
+async def reset_progress(
+    payload: ProgressResetRequest,
+    auth: CurrentAuthWithCsrf,
+    db: Database,
+) -> None:
+    if not await run_in_threadpool(verify_password, payload.password, auth.user.password_hash):
+        raise ApiError(403, "password_invalid", "Das Passwort ist nicht korrekt.")
+    await lock_learning_state(db, auth.user.id)
+    if payload.deck_id is not None:
+        deck = await db.scalar(select(Deck).where(
+            Deck.id == payload.deck_id, Deck.status == "published",
+        ))
+        if not deck:
+            raise ApiError(404, "deck_not_found", "Dieses Deck ist nicht veröffentlicht.")
+
+    sessions = delete(StudySession).where(StudySession.user_id == auth.user.id)
+    if payload.deck_id is not None:
+        sessions = sessions.where(StudySession.deck_id == payload.deck_id)
+    # Items and review events cascade with sessions. Removing old session IDs also
+    # prevents an already-open tab or retry from recreating the cleared progress.
+    await db.execute(sessions)
+    for model in (UserCardProgress, UserCardPreference):
+        statement = delete(model).where(model.user_id == auth.user.id)
+        if payload.deck_id is not None:
+            statement = statement.where(model.card_id.in_(
+                select(Card.id).where(Card.deck_id == payload.deck_id)
+            ))
+        await db.execute(statement)
+    await db.commit()

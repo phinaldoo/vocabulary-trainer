@@ -37,6 +37,10 @@ class User(Base):
             name="users_direction_check",
         ),
         CheckConstraint("input_mode IN ('typing', 'reveal')", name="users_input_mode_check"),
+        CheckConstraint(
+            "selection_mode IN ('scheduled', 'random', 'adaptive', 'mistakes')",
+            name="users_selection_mode_check",
+        ),
         CheckConstraint("role IN ('user', 'admin')", name="users_role_check"),
         CheckConstraint(
             "language IS NULL OR language IN ('en', 'zh-Hans', 'hi', 'es', 'de')",
@@ -54,12 +58,14 @@ class User(Base):
     daily_goal: Mapped[int] = mapped_column(Integer, default=12)
     direction: Mapped[str] = mapped_column(String(16), default="forward")
     input_mode: Mapped[str] = mapped_column(String(16), default="typing")
+    selection_mode: Mapped[str] = mapped_column(String(16), default="scheduled")
     selected_deck_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("decks.id", ondelete="SET NULL"), nullable=True
     )
     selected_section_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("sections.id", ondelete="SET NULL"), nullable=True
     )
+    selected_section_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
@@ -198,6 +204,23 @@ class UserCardProgress(Base):
     version: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class UserCardPreference(Base):
+    __tablename__ = "user_card_preferences"
+    __table_args__ = (
+        CheckConstraint(
+            "difficulty IN ('easy', 'normal', 'hard')", name="preference_difficulty_check",
+        ),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    card_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("cards.id", ondelete="CASCADE"), primary_key=True
+    )
+    difficulty: Mapped[str] = mapped_column(String(16))
+
+
 class UserFavorite(Base):
     __tablename__ = "user_favorites"
 
@@ -222,6 +245,10 @@ class StudySession(Base):
             name="study_sessions_input_mode_check",
         ),
         CheckConstraint("target_count BETWEEN 1 AND 50", name="study_sessions_target_check"),
+        CheckConstraint(
+            "selection_mode IN ('scheduled', 'random', 'adaptive', 'mistakes')",
+            name="study_sessions_selection_mode_check",
+        ),
         Index("idx_study_sessions_user_started", "user_id", "started_at"),
     )
 
@@ -231,8 +258,12 @@ class StudySession(Base):
     section_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("sections.id", ondelete="SET NULL"), nullable=True
     )
+    section_ids: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     direction: Mapped[str] = mapped_column(String(16))
     input_mode: Mapped[str] = mapped_column(String(16))
+    selection_mode: Mapped[str] = mapped_column(
+        String(16), default="scheduled", server_default="scheduled"
+    )
     target_count: Mapped[int] = mapped_column(Integer)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
