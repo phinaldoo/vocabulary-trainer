@@ -148,6 +148,11 @@ class AccountDeleteRequest(BaseModel):
     password: Annotated[str, StringConstraints(min_length=1, max_length=128)]
 
 
+class ProgressResetRequest(AccountDeleteRequest):
+    deck_id: uuid.UUID | None = None
+    confirm: Literal[True]
+
+
 class LanguageUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

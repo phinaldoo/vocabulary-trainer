@@ -2,6 +2,17 @@ import type { UiLanguage } from '../types';
 
 // Key, English, Simplified Chinese, Hindi, Spanish, German.
 export const messageRows = [
+  ["reset.title", "Reset learning progress", "重置学习进度", "सीखने की प्रगति रीसेट करें", "Restablecer progreso", "Lernfortschritt zurücksetzen"],
+  ["reset.intro", "Start over in one deck or all decks.", "重新开始一个或所有卡组。", "एक या सभी डेक में फिर से शुरू करें।", "Empieza de nuevo en uno o todos los mazos.", "Starte in einem oder allen Decks neu."],
+  ["reset.open", "Reset progress…", "重置进度…", "प्रगति रीसेट करें…", "Restablecer progreso…", "Fortschritt zurücksetzen…"],
+  ["reset.description", "This deletes your learning progress, review history, study sessions and personal difficulty settings for the chosen scope. Your account, favorites and other preferences are kept. This cannot be undone.", "这将删除所选范围内的学习进度、复习记录、学习会话及个人难度设置。你的账户、收藏及其他设置会保留。此操作无法撤销。", "यह चुने गए दायरे की प्रगति, समीक्षा इतिहास, अभ्यास सत्र और व्यक्तिगत कठिनाई मिटा देगा। खाता, पसंदीदा और अन्य सेटिंग्स बनी रहेंगी। इसे वापस नहीं किया जा सकता।", "Se eliminarán tu progreso, historial, sesiones y dificultad personal del ámbito elegido. Se conservan la cuenta, favoritos y demás preferencias. No se puede deshacer.", "Dies löscht deinen Lernfortschritt, Bewertungsverlauf, Lernrunden und persönliche Schwierigkeit im gewählten Umfang. Dein Konto, Favoriten und weitere Einstellungen bleiben erhalten. Das lässt sich nicht rückgängig machen."],
+  ["reset.scope", "Reset scope", "重置范围", "रीसेट का दायरा", "Ámbito del restablecimiento", "Umfang"],
+  ["reset.allDecks", "All decks", "所有卡组", "सभी डेक", "Todos los mazos", "Alle Decks"],
+  ["reset.confirm", "I want to permanently reset progress for: {{scope}}.", "我确认永久重置以下范围的进度：{{scope}}。", "मैं इसकी प्रगति स्थायी रूप से रीसेट करना चाहता हूँ: {{scope}}।", "Quiero restablecer permanentemente el progreso de: {{scope}}.", "Ich möchte den Fortschritt für {{scope}} dauerhaft zurücksetzen."],
+  ["reset.submit", "Reset permanently", "永久重置", "स्थायी रूप से रीसेट करें", "Restablecer permanentemente", "Dauerhaft zurücksetzen"],
+  ["reset.busy", "Resetting…", "正在重置…", "रीसेट हो रहा है…", "Restableciendo…", "Wird zurückgesetzt…"],
+  ["reset.success", "Learning progress reset for {{scope}}.", "已重置 {{scope}} 的学习进度。", "{{scope}} की सीखने की प्रगति रीसेट कर दी गई।", "Progreso restablecido para {{scope}}.", "Lernfortschritt für {{scope}} wurde zurückgesetzt."],
+
   ["learn.selection.mistakes", "Mistakes only", "仅错题", "केवल गलतियाँ", "Solo errores", "Nur Fehler"],
   ["learn.selectionHelp.mistakes", "Repeat words you last answered incorrectly, even if they are not due yet. Correct answers leave this selection.", "重复上次答错的词汇，即使尚未到期。答对后将不再出现在此选择中。", "पिछली बार गलत किए गए शब्द दोहराएँ, भले ही अभी नियत न हों। सही उत्तर इस चयन से हट जाते हैं।", "Repite palabras que fallaste por última vez, aunque aún no toque. Las acertadas salen de esta selección.", "Wiederhole zuletzt falsch beantwortete Wörter, auch vor ihrer Fälligkeit. Richtig beantwortete Wörter verlassen diese Auswahl."],
   ["learn.repeatMistakes", "Repeat mistakes", "重练错题", "गलतियाँ दोहराएँ", "Repetir errores", "Fehler wiederholen"],

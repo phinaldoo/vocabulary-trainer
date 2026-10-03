@@ -255,3 +255,18 @@ session. Both paths respect the chosen deck, chapters and translation direction;
 a vocabulary appears at most once per session. A subsequent correct/Good answer
 (including an explicitly accepted typing answer) removes it from the mistake queue.
 Fully random and adaptive random keep their own sampling rules.
+
+### Reset learning progress
+
+Settings offers **Reset progress…** separately from account deletion. Choose a deck
+or all decks, enter your password and confirm the scope. This removes only your
+progress, review statistics, learning sessions and personal difficulty preferences
+in that scope. Your login, profile, favorites, settings and shared vocabulary remain.
+Other users are unaffected. Old learning sessions become invalid, including pending
+review retries. Reset and learning writes use the same per-user PostgreSQL lock so
+a concurrent review cannot restore progress after the reset completes.
+
+To verify reset/review transaction ordering on PostgreSQL, migrate a dedicated test
+database, set `TEST_POSTGRES_URL` to its SQLAlchemy async URL, and run
+`pytest tests/test_progress_reset_postgres.py`. This optional test creates and removes
+its own test account/deck and is skipped when that variable is absent.

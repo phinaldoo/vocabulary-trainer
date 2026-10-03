@@ -22,6 +22,11 @@ from app.models import (
 from app.schemas import StudyCard, StudySessionCreate, StudySessionPublic
 
 
+async def lock_learning_state(db: AsyncSession, user_id: uuid.UUID) -> None:
+    """Serialize reset, session creation and reviews for a learner on PostgreSQL."""
+    await db.scalar(select(User.id).where(User.id == user_id).with_for_update())
+
+
 def direction_for(card: Card, setting: str) -> str:
     if setting != "mixed":
         return setting
@@ -108,6 +113,7 @@ async def create_study_session(
     user: User,
     payload: StudySessionCreate,
 ) -> StudySessionPublic:
+    await lock_learning_state(db, user.id)
     deck = await db.scalar(
         select(Deck).where(Deck.id == payload.deck_id, Deck.status == "published")
     )
