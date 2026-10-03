@@ -1,4 +1,5 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { StrictMode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { Link, MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -226,6 +227,45 @@ describe('Lernmodus', () => {
     expect(screen.getByRole('button', { name: /Did not know/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^Knew it/ })).toBeInTheDocument();
     await waitFor(() => expect(screen.getAllByRole('button', { name: /know|knew/i })).toHaveLength(2));
+  });
+
+  it('keeps focus across delayed checks, failed saves, and consecutive cards in StrictMode', async () => {
+    let resolveCheck!: (value: unknown) => void;
+    let rejectReview!: (reason: Error) => void;
+    let resolveReview!: (value: unknown) => void;
+    let attempts = 0;
+    mockApi.mockImplementation((path: string) => {
+      if (path === '/decks') return Promise.resolve([deck]);
+      if (path === '/study-sessions/session-1') return Promise.resolve({
+        ...session, input_mode: 'typing', total: 3,
+        cards: [1, 2, 3].map((i) => ({ ...session.cards[0], item_id: `item-${i}`, prompt: `word-${i}` })),
+      });
+      if (path.endsWith('/check')) return new Promise((resolve) => { resolveCheck = resolve; });
+      if (path.endsWith('/reviews')) {
+        attempts += 1;
+        return new Promise((resolve, reject) => { resolveReview = resolve; rejectReview = reject; });
+      }
+      throw new Error(path);
+    });
+    const user = userEvent.setup();
+    render(<StrictMode><I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider></StrictMode>);
+    expect(await screen.findByRole('textbox')).toHaveFocus();
+    for (let i = 1; i <= 2; i += 1) {
+      await user.keyboard(`answer-${i}{Enter}`);
+      expect(screen.getByRole('button', { name: 'Check' })).toBeDisabled();
+      await act(async () => resolveCheck({ correct: true, solution: 'answer', match_kind: 'exact' }));
+      expect(screen.getByRole('button', { name: /Next card/ })).toHaveFocus();
+      await user.keyboard('{Enter}');
+      if (attempts === 1) {
+        await act(async () => rejectReview(new Error('Temporary network error')));
+        expect(screen.getByRole('button', { name: /Next card/ })).toHaveFocus();
+        await user.keyboard('{Enter}');
+      }
+      await act(async () => resolveReview({ reviewed: i, correct_reviewed: i, complete: false }));
+      expect(screen.getByRole('heading', { name: `word-${i + 1}` })).toBeInTheDocument();
+      expect(screen.getByRole('textbox')).toHaveFocus();
+      expect(screen.getByRole('textbox')).toHaveValue('');
+    }
   });
 
   it.each([true, false])('advances with Enter after checking an answer (correct: %s)', async (correct) => {
