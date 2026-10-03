@@ -1,5 +1,6 @@
 import math
 import uuid
+from typing import Literal
 
 from fastapi import APIRouter, Query, Response, status
 from sqlalchemy import case, func, select
@@ -7,10 +8,11 @@ from sqlalchemy.exc import IntegrityError
 
 from app.dependencies import CurrentAuth, CurrentAuthWithCsrf, Database
 from app.errors import ApiError
-from app.models import Card, Deck, Section, UserCardProgress, UserFavorite
-from app.schemas import CardPublic, DeckPublic, PaginatedCards, SectionPublic
+from app.models import Card, Deck, Section, UserCardPreference, UserCardProgress, UserFavorite
+from app.schemas import CardPublic, DeckPublic, DifficultyUpdate, PaginatedCards, SectionPublic
 from app.services.analytics import progress_data
 from app.services.catalogue import deck_public, published_decks, resolve_published_deck
+from app.services.study import lock_learning_state
 
 router = APIRouter(tags=["catalog"])
 
@@ -48,6 +50,11 @@ async def card_list(
         default="all",
         pattern="^(all|new|learning|familiar|mastered|difficult|favorites)$",
     ),
+    sort_by: Literal[
+        "original", "front", "back", "section", "gender", "part_of_speech",
+        "additional_info", "additional_info_2", "difficulty", "status",
+    ] = "original",
+    sort_direction: Literal["asc", "desc"] = "asc",
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=36, ge=1, le=100),
 ) -> PaginatedCards:
@@ -80,6 +87,11 @@ async def card_list(
     favorite_subquery = (
         select(UserFavorite.card_id).where(UserFavorite.user_id == auth.user.id).subquery()
     )
+    preference_subquery = (
+        select(UserCardPreference.card_id, UserCardPreference.difficulty)
+        .where(UserCardPreference.user_id == auth.user.id).subquery()
+    )
+    difficulty = func.coalesce(preference_subquery.c.difficulty, "auto")
     item_state = case(
         (progress_subquery.c.repetitions.is_(None), "new"),
         (
@@ -98,12 +110,13 @@ async def card_list(
             Section.title,
             favorite_subquery.c.card_id.label("favorite_id"),
             item_state,
+            difficulty,
         )
         .outerjoin(Section, Section.id == Card.section_id)
+        .outerjoin(preference_subquery, preference_subquery.c.card_id == Card.id)
         .outerjoin(progress_subquery, progress_subquery.c.card_id == Card.id)
         .outerjoin(favorite_subquery, favorite_subquery.c.card_id == Card.id)
         .where(Card.active.is_(True), Card.deck_id == deck.id)
-        .order_by(Card.sort_order)
     )
     if section_id:
         query = query.where(Card.section_id == section_id)
@@ -112,8 +125,35 @@ async def card_list(
         query = query.where(Card.front_text.ilike(needle) | Card.back_text.ilike(needle))
     if state == "favorites":
         query = query.where(favorite_subquery.c.card_id.is_not(None))
+    elif state == "difficult":
+        query = query.where(
+            (difficulty == "hard") | ((difficulty == "auto") & (item_state == "difficult"))
+        )
     elif state != "all":
         query = query.where(item_state == state)
+
+    metadata_keys = {
+        "gender": ("gender", "genus"),
+        "part_of_speech": ("part_of_speech", "partOfSpeech", "wortart"),
+        "additional_info": ("additional_info", "info", "zusatzinformation"),
+        "additional_info_2": ("additional_info_2", "note", "zusatzinformation2"),
+    }
+    difficulty_order = case(
+        (difficulty == "easy", 0), (difficulty == "normal", 1), (difficulty == "hard", 2),
+        (item_state == "difficult", 2), (item_state == "mastered", 0), else_=1,
+    )
+    if sort_by in metadata_keys:
+        ordering = func.lower(func.coalesce(*[
+            func.nullif(Card.details[key].as_string(), "") for key in metadata_keys[sort_by]
+        ]))
+    else:
+        ordering = {
+            "original": Card.sort_order, "front": func.lower(Card.front_text),
+            "back": func.lower(Card.back_text), "section": Section.sort_order,
+            "difficulty": difficulty_order, "status": item_state,
+        }[sort_by]
+    ordering = ordering.desc() if sort_direction == "desc" else ordering.asc()
+    query = query.order_by(ordering.nulls_last(), Card.sort_order, Card.id)
 
     total = int(
         await db.scalar(
@@ -131,9 +171,10 @@ async def card_list(
                 "section_title": section_title,
                 "favorite": favorite_id is not None,
                 "status": item_state,
+                "difficulty": card_difficulty,
             }
         )
-        for card, section_title, favorite_id, item_state in rows
+        for card, section_title, favorite_id, item_state, card_difficulty in rows
     ]
     response.headers["Cache-Control"] = "private, no-store"
     return PaginatedCards(
@@ -177,3 +218,31 @@ async def remove_favorite(
     if favorite:
         await db.delete(favorite)
         await db.commit()
+
+
+@router.put("/cards/{card_id}/difficulty", response_model=DifficultyUpdate)
+async def set_card_difficulty(
+    card_id: uuid.UUID,
+    payload: DifficultyUpdate,
+    auth: CurrentAuthWithCsrf,
+    db: Database,
+) -> DifficultyUpdate:
+    card = await db.scalar(
+        select(Card).join(Deck, Deck.id == Card.deck_id)
+        .where(Card.id == card_id, Card.active.is_(True), Deck.status == "published")
+    )
+    if not card:
+        raise ApiError(404, "card_not_found", "Diese Karte gibt es nicht.")
+    # Serialize preference updates for this learner, including concurrent inserts.
+    await lock_learning_state(db, auth.user.id)
+    preference = await db.get(UserCardPreference, (auth.user.id, card_id))
+    if payload.difficulty == "auto":
+        if preference:
+            await db.delete(preference)
+    elif preference:
+        preference.difficulty = payload.difficulty
+    else:
+        db.add(UserCardPreference(user_id=auth.user.id, card_id=card_id,
+                                  difficulty=payload.difficulty))
+    await db.commit()
+    return payload

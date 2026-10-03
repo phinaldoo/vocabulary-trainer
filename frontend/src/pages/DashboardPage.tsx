@@ -54,6 +54,7 @@ export function DashboardPage() {
           <h2>{data.due_count > 0 ? t(data.due_count === 1 ? 'dashboard.cardsWaitingOne' : 'dashboard.cardsWaitingMany', { count: number(data.due_count) }) : t('dashboard.doneToday')}</h2>
           <div className="learn-card-bottom">
             <Link className="button light" to="/lernen">{data.reviewed_today ? t('dashboard.continue') : t('dashboard.start')} <ArrowRight /></Link>
+            <Link className="button light random-practice-link" to={`/lernen?deck=${data.deck!.id}&selection=random&section=`}>{t('learn.randomPractice')} <ArrowRight /></Link>
             {data.reviewed_today > 0 && <span>{t('dashboard.reviewedToday', { count: number(data.reviewed_today) })}</span>}
           </div>
         </article>
