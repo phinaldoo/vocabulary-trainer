@@ -23,6 +23,7 @@ SelectionMode = Literal["scheduled", "random", "adaptive"]
 UiLanguage = Literal["en", "zh-Hans", "hi", "es", "de"]
 DeckStatus = Literal["draft", "published", "archived"]
 MatcherProfile = Literal["generic-v1", "german-v1", "latin-v1"]
+Difficulty = Literal["auto", "easy", "normal", "hard"]
 CardStatus = Literal["new", "learning", "familiar", "mastered", "difficult"]
 AnswerText = Annotated[
     str,
@@ -267,6 +268,7 @@ class CardPublic(BaseModel):
     active: bool
     favorite: bool = False
     status: CardStatus = "new"
+    difficulty: Difficulty = "auto"
 
 
 class PaginatedCards(BaseModel):
@@ -275,6 +277,11 @@ class PaginatedCards(BaseModel):
     page_size: int
     total: int
     pages: int
+
+
+class DifficultyUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    difficulty: Difficulty
 
 
 class CardCreate(BaseModel):

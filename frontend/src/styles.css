@@ -45,6 +45,7 @@
 html { min-width: 320px; scroll-behavior: smooth; }
 body { margin: 0; min-width: 320px; min-height: 100vh; background: var(--bg); color: var(--ink); }
 button, input, select, textarea { font: inherit; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 button, a { -webkit-tap-highlight-color: transparent; }
 button { color: inherit; }
 a { color: inherit; text-decoration: none; }
@@ -669,3 +670,23 @@ kbd { border: 1px solid rgb(0 0 0 / 12%); border-radius: 5px; background: rgb(25
 .flashcard.flip-mode { display: grid; }
 .flashcard.flip-mode .card-face { position: relative; inset: auto; grid-area: 1 / 1; }
 .flashcard.flip-mode.revealed .card-front { visibility: hidden; }
+
+.catalog-view-controls { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
+.catalog-view-controls label, .difficulty-control { display: grid; gap: 5px; font-size: 12px; color: var(--muted); }
+.catalog-view-controls select, .difficulty-control select { max-width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; background: white; color: var(--ink); }
+.view-toggle { display: flex; gap: 4px; margin-right: auto; }
+.view-toggle button { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: white; }
+.view-toggle button[aria-pressed="true"] { background: var(--ink); color: white; }
+.view-toggle svg { width: 16px; height: 16px; }
+.difficulty-hint { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.vocabulary-card > .difficulty-control { margin: 0 22px 18px; }
+.detail-dialog > .difficulty-control { margin-top: 20px; }
+.vocabulary-table-scroll { max-width: 100%; overflow-x: auto; }
+.vocabulary-table { width: 100%; min-width: 1080px; border-collapse: collapse; text-align: left; font-size: 13px; }
+.vocabulary-table th, .vocabulary-table td { padding: 14px 16px; border-bottom: 1px solid var(--border); vertical-align: top; max-width: 250px; overflow-wrap: anywhere; white-space: pre-wrap; }
+.vocabulary-table thead th { background: var(--surface, #f8f8fa); font-size: 11px; white-space: nowrap; }
+.vocabulary-table thead button { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; color: inherit; padding: 0; text-align: left; }
+.vocabulary-table thead svg { width: 12px; height: 12px; }
+.vocabulary-table .difficulty-control > span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.word-detail-link { background: none; border: 0; padding: 0; text-align: left; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 600px) { .catalog-view-controls label { flex: 1 1 140px; } .view-toggle { flex-basis: 100%; } }

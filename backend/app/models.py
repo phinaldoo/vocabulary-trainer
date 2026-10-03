@@ -199,6 +199,23 @@ class UserCardProgress(Base):
     version: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class UserCardPreference(Base):
+    __tablename__ = "user_card_preferences"
+    __table_args__ = (
+        CheckConstraint(
+            "difficulty IN ('easy', 'normal', 'hard')", name="preference_difficulty_check",
+        ),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    card_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("cards.id", ondelete="CASCADE"), primary_key=True
+    )
+    difficulty: Mapped[str] = mapped_column(String(16))
+
+
 class UserFavorite(Base):
     __tablename__ = "user_favorites"
 

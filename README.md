@@ -225,3 +225,16 @@ means all sections. IDs are deduplicated and must belong to the published deck
 and active sections. The legacy `section_id` remains supported. Conflicting
 singular and plural selections are rejected. Session responses include
 `section_ids` and `section_titles`. Apply `alembic upgrade head` when upgrading.
+
+### All vocabulary
+
+The catalogue offers cards and a sortable list, with search and section/status filters.
+Sorting applies to the entire selection before pagination: either language, chapter,
+gender, part of speech, both additional information fields, difficulty, or learning status.
+The view, filters, sorting, and current page are preserved in the URL.
+
+Each learner can set a word's difficulty to Automatic, Easy, Normal, or Hard in either
+view or the detail dialog. This personal setting does not create a review or change
+another learner's progress. Adaptive random practice multiplies the normal weight by
+0.5 / 1 / 2 for Easy / Normal / Hard; Automatic uses review history alone. Fully random
+practice stays uniform. Apply `alembic upgrade head` to create the preference table.

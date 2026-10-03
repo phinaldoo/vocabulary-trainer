@@ -65,6 +65,8 @@ export type Section = {
   progress_percent: number;
 };
 
+export type Difficulty = 'auto' | 'easy' | 'normal' | 'hard';
+
 export type CardStatus = 'new' | 'learning' | 'familiar' | 'mastered' | 'difficult';
 
 export type Card = {
@@ -82,6 +84,7 @@ export type Card = {
   active: boolean;
   favorite: boolean;
   status: CardStatus;
+  difficulty: Difficulty;
 };
 
 export type CardPage = {
