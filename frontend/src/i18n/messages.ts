@@ -2,6 +2,7 @@ import type { UiLanguage } from '../types';
 
 // Key, English, Simplified Chinese, Hindi, Spanish, German.
 export const messageRows = [
+  ["learn.acceptAnswer", "My answer was correct", "我的答案是正确的", "मेरा उत्तर सही था", "Mi respuesta era correcta", "Meine Antwort war richtig"],
   ["learn.selectionMode", "Card selection", "卡片选择", "कार्ड चयन", "Selección de tarjetas", "Kartenauswahl"],
   ["learn.selection.scheduled", "Due and new cards", "到期和新卡片", "नियत और नए कार्ड", "Tarjetas pendientes y nuevas", "Fällige und neue Karten"],
   ["learn.selection.random", "Fully random", "完全随机", "पूरी तरह यादृच्छिक", "Totalmente aleatorio", "Völlig zufällig"],

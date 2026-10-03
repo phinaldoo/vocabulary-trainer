@@ -385,6 +385,7 @@ class TypingReview(BaseModel):
     type: Literal["typing"]
     answer: AnswerText
     rating: int = Field(ge=0, le=3)
+    accept_as_correct: bool = False
 
 
 class FlipReview(BaseModel):

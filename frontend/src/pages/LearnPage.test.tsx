@@ -229,6 +229,26 @@ describe('Lernmodus', () => {
     await waitFor(() => expect(screen.getAllByRole('button', { name: /know|knew/i })).toHaveLength(2));
   });
 
+  it('accepts a rejected answer explicitly and includes it in completion accuracy', async () => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => {
+      if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, input_mode: 'typing' });
+      if (path.endsWith('/check')) return Promise.resolve({ correct: false, solution: 'qarilo-82', match_kind: null });
+      if (path.endsWith('/reviews')) return Promise.resolve({ reviewed: 1, correct_reviewed: 1, complete: true });
+      return original(path, options);
+    });
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await user.type(await screen.findByRole('textbox'), 'valid alternative{Enter}');
+    await user.click(await screen.findByRole('button', { name: 'My answer was correct' }));
+    expect(await screen.findByText('100%')).toBeInTheDocument();
+    const reviews = mockApi.mock.calls.filter(([path]) => path.endsWith('/reviews'));
+    expect(reviews).toHaveLength(1);
+    expect(JSON.parse(String(reviews[0]?.[1]?.body)).response).toEqual({
+      type: 'typing', answer: 'valid alternative', rating: 2, accept_as_correct: true,
+    });
+  });
+
   it('keeps focus across delayed checks, failed saves, and consecutive cards in StrictMode', async () => {
     let resolveCheck!: (value: unknown) => void;
     let rejectReview!: (reason: Error) => void;

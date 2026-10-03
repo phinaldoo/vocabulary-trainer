@@ -214,10 +214,14 @@ async def review(
             item.accepted_answers_snapshot,
             matcher_profile=item.matcher_profile,
         )
-        correct = matched.correct
+        correct = matched.correct or payload.response.accept_as_correct
         effective_rating = payload.response.rating if correct else 0
         answer = payload.response.answer
-        kind = match_kind(matched)
+        kind = (
+            "manual_override"
+            if payload.response.accept_as_correct and not matched.correct
+            else match_kind(matched)
+        )
         mode = "typing"
     else:
         if study_session.input_mode != "reveal":
