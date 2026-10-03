@@ -1,6 +1,6 @@
 export type Direction = 'forward' | 'reverse' | 'mixed';
 export type CardDirection = Exclude<Direction, 'mixed'>;
-export type SelectionMode = 'scheduled' | 'random' | 'adaptive';
+export type SelectionMode = 'scheduled' | 'random' | 'adaptive' | 'mistakes';
 export type InputMode = 'typing' | 'reveal';
 export type UiLanguage = 'en' | 'zh-Hans' | 'hi' | 'es' | 'de';
 export type DeckStatus = 'draft' | 'published' | 'archived';
@@ -15,6 +15,7 @@ export type User = {
   daily_goal: number;
   direction: Direction;
   input_mode: InputMode;
+  selection_mode: SelectionMode;
   selected_deck_id: string | null;
   selected_section_id: string | null;
   selected_section_ids?: string[] | null;
@@ -65,6 +66,8 @@ export type Section = {
   progress_percent: number;
 };
 
+export type Difficulty = 'auto' | 'easy' | 'normal' | 'hard';
+
 export type CardStatus = 'new' | 'learning' | 'familiar' | 'mastered' | 'difficult';
 
 export type Card = {
@@ -82,6 +85,7 @@ export type Card = {
   active: boolean;
   favorite: boolean;
   status: CardStatus;
+  difficulty: Difficulty;
 };
 
 export type CardPage = {
