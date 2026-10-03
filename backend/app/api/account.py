@@ -61,6 +61,8 @@ async def update_settings(
     user.daily_goal = payload.daily_goal
     user.direction = payload.direction
     user.input_mode = payload.input_mode
+    if payload.selection_mode is not None:
+        user.selection_mode = payload.selection_mode
     if payload.language is not None:
         user.language = payload.language
     if payload.selected_deck_id is not None:

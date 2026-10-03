@@ -100,7 +100,8 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
   const [mode, setMode] = useState<InputMode>(user?.input_mode ?? 'typing');
   const requestedSelection = params.get('selection');
   const [selectionMode, setSelectionMode] = useState<SelectionMode>(
-    requestedSelection === 'random' || requestedSelection === 'adaptive' ? requestedSelection : 'scheduled',
+    requestedSelection === 'random' || requestedSelection === 'adaptive' || requestedSelection === 'scheduled'
+      ? requestedSelection : user?.selection_mode ?? 'scheduled',
   );
   const [limit, setLimit] = useState(user?.daily_goal ?? 12);
   const [starting, setStarting] = useState(false);
@@ -173,7 +174,7 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
         <article className="setup-section panel compact-settings">
           <div className="setup-heading"><span>3</span><div><h2>{t('learn.directionSize')}</h2><p>{t('learn.matchGoal')}</p></div></div>
           <label><span>{t('settings.direction')}</span><div className="select-wrap"><select value={direction} onChange={(event) => setDirection(event.target.value as Direction)}><option value="forward">{deck.front_label} → {deck.back_label}</option><option value="reverse">{deck.back_label} → {deck.front_label}</option><option value="mixed">{t('settings.mixed')}</option></select><ChevronDown /></div></label>
-          <label><span>{t('learn.selectionMode')}</span><div className="select-wrap"><select aria-describedby="selection-help" value={selectionMode} onChange={(event) => setSelectionMode(event.target.value as SelectionMode)}>{(['scheduled', 'random', 'adaptive'] as const).map((value) => <option key={value} value={value}>{t(`learn.selection.${value}`)}</option>)}</select><ChevronDown /></div></label>
+          <label><span>{t('learn.selectionMode')}</span><div className="select-wrap"><select aria-describedby="selection-help" value={selectionMode} onChange={(event) => { const value = event.target.value as SelectionMode; setSelectionMode(value); setParams((current) => { const next = new URLSearchParams(current); next.set('selection', value); return next; }, { replace: true }); }}>{(['scheduled', 'random', 'adaptive'] as const).map((value) => <option key={value} value={value}>{t(`learn.selection.${value}`)}</option>)}</select><ChevronDown /></div></label>
           <p id="selection-help">{t(`learn.selectionHelp.${selectionMode}`)} {t('learn.randomSections')}</p>
           <label><span>{t('learn.cardCount')}</span><div className="select-wrap"><select value={limit} onChange={(event) => setLimit(Number(event.target.value))}>{[5, 10, 12, 20, 30, 50].map((value) => <option key={value} value={value}>{t(value === 1 ? 'common.cardsOne' : 'common.cardsMany', { count: number(value) })}</option>)}</select><ChevronDown /></div></label>
         </article>
@@ -362,6 +363,7 @@ export function LearnPage() {
         selected_section_ids: config.section_ids,
         direction: config.direction,
         input_mode: config.input_mode,
+        selection_mode: config.selection_mode,
       });
     }
     setSession(next);

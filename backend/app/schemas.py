@@ -80,6 +80,7 @@ class UserPublic(BaseModel):
     daily_goal: int
     direction: Direction
     input_mode: InputMode
+    selection_mode: SelectionMode = "scheduled"
     selected_deck_id: uuid.UUID | None
     selected_section_id: uuid.UUID | None
     selected_section_ids: list[uuid.UUID] | None = None
@@ -128,6 +129,7 @@ class SettingsUpdate(BaseModel):
     direction: Direction
     input_mode: InputMode
     language: UiLanguage | None = None
+    selection_mode: SelectionMode | None = None
     selected_deck_id: uuid.UUID | None = None
     selected_section_id: uuid.UUID | None = None
     selected_section_ids: list[uuid.UUID] | None = Field(default=None, max_length=1000)

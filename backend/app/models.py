@@ -37,6 +37,10 @@ class User(Base):
             name="users_direction_check",
         ),
         CheckConstraint("input_mode IN ('typing', 'reveal')", name="users_input_mode_check"),
+        CheckConstraint(
+            "selection_mode IN ('scheduled', 'random', 'adaptive')",
+            name="users_selection_mode_check",
+        ),
         CheckConstraint("role IN ('user', 'admin')", name="users_role_check"),
         CheckConstraint(
             "language IS NULL OR language IN ('en', 'zh-Hans', 'hi', 'es', 'de')",
@@ -54,6 +58,7 @@ class User(Base):
     daily_goal: Mapped[int] = mapped_column(Integer, default=12)
     direction: Mapped[str] = mapped_column(String(16), default="forward")
     input_mode: Mapped[str] = mapped_column(String(16), default="typing")
+    selection_mode: Mapped[str] = mapped_column(String(16), default="scheduled")
     selected_deck_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("decks.id", ondelete="SET NULL"), nullable=True
     )

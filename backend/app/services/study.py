@@ -65,6 +65,17 @@ def random_selection(
     payload: StudySessionCreate,
     difficulties: dict[uuid.UUID, str] | None = None,
 ) -> list[tuple[Card, str, int]]:
+    if payload.selection_mode == "random":
+        selected = []
+        for card in random.sample(cards, min(payload.limit, len(cards))):
+            direction = (
+                random.choice(["forward", "reverse"])
+                if payload.direction == "mixed" else payload.direction
+            )
+            progress = progress_map.get((card.id, direction))
+            selected.append((card, direction, progress.version if progress else 0))
+        return selected
+
     # An exponential race samples without replacement in weighted random order.
     # In mixed mode, average both directions for card selection, then favor the
     # weaker direction. Each vocabulary appears at most once in a session.
@@ -216,6 +227,7 @@ async def create_study_session(
     user.selected_section_ids = [str(value) for value in section_ids]
     user.direction = payload.direction
     user.input_mode = payload.input_mode
+    user.selection_mode = payload.selection_mode
     await db.commit()
     return await get_study_session(db, user.id, study_session.id)
 

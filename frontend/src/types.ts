@@ -15,6 +15,7 @@ export type User = {
   daily_goal: number;
   direction: Direction;
   input_mode: InputMode;
+  selection_mode: SelectionMode;
   selected_deck_id: string | null;
   selected_section_id: string | null;
   selected_section_ids?: string[] | null;

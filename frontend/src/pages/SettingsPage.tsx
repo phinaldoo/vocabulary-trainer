@@ -7,7 +7,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useModalDialog } from '../hooks/useModalDialog';
 import { useI18n } from '../i18n';
 import { languageNames, supportedLanguages } from '../i18n/locale';
-import type { Deck, Direction, InputMode, Section, UiLanguage, User } from '../types';
+import type { Deck, Direction, InputMode, Section, SelectionMode, UiLanguage, User } from '../types';
 
 export function SettingsPage() {
   const { user, updateUser, clearUser, logout } = useAuth();
@@ -16,6 +16,7 @@ export function SettingsPage() {
   const [dailyGoal, setDailyGoal] = useState(user?.daily_goal ?? 12);
   const [direction, setDirection] = useState<Direction>(user?.direction ?? 'forward');
   const [inputMode, setInputMode] = useState<InputMode>(user?.input_mode ?? 'typing');
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>(user?.selection_mode ?? 'scheduled');
   const [interfaceLanguage, setInterfaceLanguage] = useState<UiLanguage>(user?.language ?? language);
   const [deckId, setDeckId] = useState(user?.selected_deck_id ?? '');
   const [sectionId, setSectionId] = useState(user?.selected_section_ids && user.selected_section_ids.length > 1 ? 'multiple' : user?.selected_section_id ?? '');
@@ -51,12 +52,13 @@ export function SettingsPage() {
   const profileChanged = profileName.trim() !== user.display_name
     || profileEmail.trim().toLowerCase() !== user.email;
 
-  function save(changes: Partial<Pick<User, 'daily_goal' | 'direction' | 'input_mode' | 'language' | 'selected_deck_id' | 'selected_section_id'>>) {
+  function save(changes: Partial<Pick<User, 'daily_goal' | 'direction' | 'input_mode' | 'selection_mode' | 'language' | 'selected_deck_id' | 'selected_section_id'>>) {
     const version = ++saveVersion.current;
     const body = JSON.stringify({
       daily_goal: dailyGoal,
       direction,
       input_mode: inputMode,
+      selection_mode: selectionMode,
       language: interfaceLanguage,
       selected_deck_id: selectedDeck?.id ?? null,
       selected_section_id: sectionId === 'multiple' ? null : sectionId || null,
@@ -114,6 +116,7 @@ export function SettingsPage() {
         {selectedDeck && <><label><span>{t('settings.defaultDeck')}</span><div className="select-wrap"><select value={selectedDeck.id} onChange={(event) => { setDeckId(event.target.value); setSectionId(''); save({ selected_deck_id: event.target.value, selected_section_id: null }); }}>{decks.data?.map((deck) => <option key={deck.id} value={deck.id}>{deck.title}</option>)}</select><ChevronDown /></div></label><label><span>{t('settings.defaultSection')}</span><div className="select-wrap"><select value={sectionId} onChange={(event) => { setSectionId(event.target.value); save({ selected_section_id: event.target.value || null }); }}><option value="">{t('common.allSections')}</option>{sectionId === 'multiple' && <option value="multiple" disabled>{sections.data?.filter((section) => user.selected_section_ids?.includes(section.id)).map((section) => section.title).join(', ') || t('learn.chooseSection')}</option>}{sections.data?.map((section) => <option key={section.id} value={section.id}>{section.title}</option>)}</select><ChevronDown /></div></label></>}
         <label><span>{t('settings.dailyGoal')}</span><div className="select-wrap"><select value={dailyGoal} onChange={(event) => { setDailyGoal(Number(event.target.value)); save({ daily_goal: Number(event.target.value) }); }}>{[5, 10, 12, 20, 30, 50, 100, 150, 200, 250, 500].map((value) => <option key={value} value={value}>{t(value === 1 ? 'common.cardsOne' : 'common.cardsMany', { count: value })}</option>)}</select><ChevronDown /></div></label>
         <label><span>{t('settings.direction')}</span><div className="select-wrap"><select value={direction} onChange={(event) => { setDirection(event.target.value as Direction); save({ direction: event.target.value as Direction }); }}><option value="forward">{selectedDeck ? `${selectedDeck.front_label} → ${selectedDeck.back_label}` : t('settings.frontToBack')}</option><option value="reverse">{selectedDeck ? `${selectedDeck.back_label} → ${selectedDeck.front_label}` : t('settings.backToFront')}</option><option value="mixed">{t('settings.mixed')}</option></select><ChevronDown /></div></label>
+        <label><span>{t('learn.selectionMode')}</span><div className="select-wrap"><select value={selectionMode} onChange={(event) => { const next = event.target.value as SelectionMode; setSelectionMode(next); save({ selection_mode: next }); }}>{(['scheduled', 'random', 'adaptive'] as const).map((value) => <option key={value} value={value}>{t(`learn.selection.${value}`)}</option>)}</select><ChevronDown /></div></label>
         <fieldset><legend>{t('settings.defaultMode')}</legend><div className="settings-modes"><label className={inputMode === 'typing' ? 'selected' : ''}><input type="radio" name="mode" checked={inputMode === 'typing'} onChange={() => { setInputMode('typing'); save({ input_mode: 'typing' }); }} /><strong>{t('settings.typeAnswer')}</strong><small>{t('settings.typeAnswerHint')}</small></label><label className={inputMode === 'reveal' ? 'selected' : ''}><input type="radio" name="mode" checked={inputMode === 'reveal'} onChange={() => { setInputMode('reveal'); save({ input_mode: 'reveal' }); }} /><strong>{t('settings.revealCard')}</strong><small>{t('settings.revealCardHint')}</small></label></div></fieldset>
         {error && <p className="form-error" role="alert">{error}</p>}
         <p role="status">{settingsSaving ? t('common.saving') : saved ? t('common.saved') : ''}</p>
