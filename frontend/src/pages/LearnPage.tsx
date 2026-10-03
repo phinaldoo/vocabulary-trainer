@@ -100,7 +100,7 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
   const [mode, setMode] = useState<InputMode>(user?.input_mode ?? 'typing');
   const requestedSelection = params.get('selection');
   const [selectionMode, setSelectionMode] = useState<SelectionMode>(
-    requestedSelection === 'random' || requestedSelection === 'adaptive' || requestedSelection === 'scheduled'
+    requestedSelection === 'random' || requestedSelection === 'adaptive' || requestedSelection === 'scheduled' || requestedSelection === 'mistakes'
       ? requestedSelection : user?.selection_mode ?? 'scheduled',
   );
   const [limit, setLimit] = useState(user?.daily_goal ?? 12);
@@ -174,7 +174,7 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
         <article className="setup-section panel compact-settings">
           <div className="setup-heading"><span>3</span><div><h2>{t('learn.directionSize')}</h2><p>{t('learn.matchGoal')}</p></div></div>
           <label><span>{t('settings.direction')}</span><div className="select-wrap"><select value={direction} onChange={(event) => setDirection(event.target.value as Direction)}><option value="forward">{deck.front_label} → {deck.back_label}</option><option value="reverse">{deck.back_label} → {deck.front_label}</option><option value="mixed">{t('settings.mixed')}</option></select><ChevronDown /></div></label>
-          <label><span>{t('learn.selectionMode')}</span><div className="select-wrap"><select aria-describedby="selection-help" value={selectionMode} onChange={(event) => { const value = event.target.value as SelectionMode; setSelectionMode(value); setParams((current) => { const next = new URLSearchParams(current); next.set('selection', value); return next; }, { replace: true }); }}>{(['scheduled', 'random', 'adaptive'] as const).map((value) => <option key={value} value={value}>{t(`learn.selection.${value}`)}</option>)}</select><ChevronDown /></div></label>
+          <label><span>{t('learn.selectionMode')}</span><div className="select-wrap"><select aria-describedby="selection-help" value={selectionMode} onChange={(event) => { const value = event.target.value as SelectionMode; setSelectionMode(value); setParams((current) => { const next = new URLSearchParams(current); next.set('selection', value); return next; }, { replace: true }); }}>{(['scheduled', 'random', 'adaptive', 'mistakes'] as const).map((value) => <option key={value} value={value}>{t(`learn.selection.${value}`)}</option>)}</select><ChevronDown /></div></label>
           <p id="selection-help">{t(`learn.selectionHelp.${selectionMode}`)} {t('learn.randomSections')}</p>
           <label><span>{t('learn.cardCount')}</span><div className="select-wrap"><select value={limit} onChange={(event) => setLimit(Number(event.target.value))}>{[5, 10, 12, 20, 30, 50].map((value) => <option key={value} value={value}>{t(value === 1 ? 'common.cardsOne' : 'common.cardsMany', { count: number(value) })}</option>)}</select><ChevronDown /></div></label>
         </article>
@@ -185,7 +185,7 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
   );
 }
 
-function Study({ session, setSession, leave }: { session: StudySession; setSession(value: StudySession): void; leave(): void }) {
+function Study({ session, setSession, leave }: { session: StudySession; setSession(value: StudySession): void; leave(selection?: SelectionMode): void }) {
   const { number, t } = useI18n();
   const card = session.cards[0] ?? null;
   const [answer, setAnswer] = useState('');
@@ -296,7 +296,7 @@ function Study({ session, setSession, leave }: { session: StudySession; setSessi
 
   if (session.complete || !card) {
     const accuracy = session.reviewed ? Math.round((session.correct_reviewed / session.reviewed) * 100) : 0;
-    return <main className="study-shell"><section className="completion-card panel"><span className="completion-icon"><Sparkles /></span><p className="section-kicker">{t('learn.completed')}</p><h1>{t('learn.wellDone')}</h1><p>{t('learn.completedText', { count: number(session.reviewed), source: session.section_titles?.join(', ') || session.section_title || session.deck_title })}</p><div className="completion-stats"><div><strong>{number(session.reviewed)}</strong><span>{t('learn.reviewed')}</span></div><div><strong>{number(accuracy)}%</strong><span>{t('learn.known')}</span></div></div><div className="completion-actions"><button className="button primary" onClick={leave}>{t('learn.newSessionButton')}</button><Link className="button secondary" to="/">{t('learn.overview')}</Link></div></section></main>;
+    return <main className="study-shell"><section className="completion-card panel"><span className="completion-icon"><Sparkles /></span><p className="section-kicker">{t('learn.completed')}</p><h1>{t(session.selection_mode === 'mistakes' && session.total === 0 ? 'learn.noMistakes' : 'learn.wellDone')}</h1><p>{session.selection_mode === 'mistakes' && session.total === 0 ? t('learn.noMistakesText') : t('learn.completedText', { count: number(session.reviewed), source: session.section_titles?.join(', ') || session.section_title || session.deck_title })}</p><div className="completion-stats"><div><strong>{number(session.reviewed)}</strong><span>{t('learn.reviewed')}</span></div><div><strong>{number(accuracy)}%</strong><span>{t('learn.known')}</span></div></div><div className="completion-actions">{session.correct_reviewed < session.reviewed && <button className="button secondary" onClick={() => leave('mistakes')}><RotateCcw /> {t('learn.repeatMistakes')}</button>}<button className="button primary" onClick={() => leave()}>{t('learn.newSessionButton')}</button><Link className="button secondary" to="/">{t('learn.overview')}</Link></div></section></main>;
   }
 
   const progress = session.total ? (session.reviewed / session.total) * 100 : 0;
@@ -306,7 +306,7 @@ function Study({ session, setSession, leave }: { session: StudySession; setSessi
 
   return (
     <main className="study-shell">
-      <header className="study-header"><button className="icon-button" type="button" disabled={submitting} onClick={leave} aria-label={t('learn.leave')}><ArrowLeft /></button><div><span>{card.section_title ?? session.deck_title}</span><small>{promptLabel} → {answerLabel}</small></div><strong>{number(session.reviewed + 1)} <span>{t('common.of')} {number(session.total)}</span></strong></header>
+      <header className="study-header"><button className="icon-button" type="button" disabled={submitting} onClick={() => leave()} aria-label={t('learn.leave')}><ArrowLeft /></button><div><span>{card.section_title ?? session.deck_title}</span><small>{promptLabel} → {answerLabel}</small></div><strong>{number(session.reviewed + 1)} <span>{t('common.of')} {number(session.total)}</span></strong></header>
       <div className="study-progress"><span style={{ width: `${progress}%` }} /></div>
       <section className="study-stage">
         <div className={`flashcard ${resultVisible ? 'revealed' : ''} ${session.input_mode === 'reveal' ? 'flip-mode' : ''}`}>
@@ -372,12 +372,12 @@ export function LearnPage() {
     setParams(search, { replace: true });
   }
 
-  function leave() {
+  function leave(selection?: SelectionMode) {
     setSession(null);
     const search = new URLSearchParams();
     if (session?.deck_id) search.set('deck', session.deck_id);
     for (const id of session?.section_ids ?? (session?.section_id ? [session.section_id] : [])) search.append('section', id);
-    if (session?.selection_mode) search.set('selection', session.selection_mode);
+    if (selection ?? session?.selection_mode) search.set('selection', selection ?? session!.selection_mode);
     setParams(search, { replace: true });
   }
 

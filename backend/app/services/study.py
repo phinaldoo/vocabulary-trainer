@@ -158,8 +158,16 @@ async def create_study_session(
     selected: list[tuple[Card, str, int]] = []
     selected_keys: set[tuple[uuid.UUID, str]] = set()
     selected_card_ids: set[uuid.UUID] = set()
-    if payload.selection_mode == "scheduled":
-        for row in due:
+    if payload.selection_mode in {"scheduled", "mistakes"}:
+        mistakes = [
+            row for row in progress if row.last_rating == 0
+            and (payload.direction == "mixed" or row.direction == payload.direction)
+        ]
+        mistakes.sort(key=lambda row: (
+            _aware(row.last_reviewed_at or row.due_at), str(row.card_id), row.direction,
+        ))
+        review_queue = mistakes + (due if payload.selection_mode == "scheduled" else [])
+        for row in review_queue:
             card = by_id.get(row.card_id)
             key = (row.card_id, row.direction)
             if not card or key in selected_keys or card.id in selected_card_ids:
@@ -170,7 +178,7 @@ async def create_study_session(
             if len(selected) == payload.limit:
                 break
 
-        if len(selected) < payload.limit:
+        if payload.selection_mode == "scheduled" and len(selected) < payload.limit:
             for card in cards:
                 direction = direction_for(card, payload.direction)
                 key = (card.id, direction)

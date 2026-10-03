@@ -1,6 +1,6 @@
 export type Direction = 'forward' | 'reverse' | 'mixed';
 export type CardDirection = Exclude<Direction, 'mixed'>;
-export type SelectionMode = 'scheduled' | 'random' | 'adaptive';
+export type SelectionMode = 'scheduled' | 'random' | 'adaptive' | 'mistakes';
 export type InputMode = 'typing' | 'reveal';
 export type UiLanguage = 'en' | 'zh-Hans' | 'hi' | 'es' | 'de';
 export type DeckStatus = 'draft' | 'published' | 'archived';
