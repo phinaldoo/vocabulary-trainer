@@ -90,6 +90,38 @@ describe('Adminbereich', () => {
     expect(screen.getByRole('button', { name: /Validate and import/ })).toBeDisabled();
   });
 
+  it('saves four vocabulary fields alongside unrelated metadata', async () => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => {
+      if (path === '/admin/decks') return Promise.resolve([{
+        id: 'deck-1', title: 'Test deck', slug: 'test', front_label: 'Front', back_label: 'Back',
+        front_language: 'la', back_language: 'de', front_matcher: 'generic-v1', back_matcher: 'generic-v1',
+        status: 'published', version: 1, card_count: 0,
+      }]);
+      if (path === '/admin/decks/deck-1/sections') return Promise.resolve([]);
+      if (path.startsWith('/admin/decks/deck-1/cards?')) return Promise.resolve({ items: [], total: 0, pages: 1 });
+      if (path === '/admin/decks/deck-1/cards' && options?.method === 'POST') return Promise.resolve({});
+      return original(path, options);
+    });
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter><AdminPage /></MemoryRouter></I18nProvider>);
+    await user.click(await screen.findByRole('button', { name: 'Card', exact: true }));
+    for (const [label, value] of [['Stable card ID', 'test-card'], ['Front', 'rosa'], ['Back', 'Rose'], ['Gender', 'f.'], ['Part of speech', 'noun'], ['Additional information', 'First declension'], ['Additional information 2', 'Example sentence']]) {
+      await user.type(screen.getByLabelText(label, { exact: true }), value!);
+    }
+    const extra = screen.getByLabelText('Other metadata (JSON)');
+    await user.clear(extra);
+    await user.click(extra);
+    await user.paste('{"source":"book"}');
+    await user.click(screen.getByRole('button', { name: 'Save card' }));
+    await waitFor(() => expect(mockApi).toHaveBeenCalledWith('/admin/decks/deck-1/cards', expect.objectContaining({ method: 'POST' })));
+    const call = mockApi.mock.calls.find(([path, options]) => path === '/admin/decks/deck-1/cards' && options?.method === 'POST');
+    expect(JSON.parse(String(call?.[1]?.body)).metadata).toEqual({
+      gender: 'f.', part_of_speech: 'noun', additional_info: 'First declension',
+      additional_info_2: 'Example sentence', source: 'book',
+    });
+  });
+
   it('allows an administrator to promote a learner', async () => {
     const actor = userEvent.setup();
     render(

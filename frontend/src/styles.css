@@ -659,3 +659,13 @@ kbd { border: 1px solid rgb(0 0 0 / 12%); border-radius: 5px; background: rgb(25
 }
 
 .accept-answer-button { margin: 0 0 1rem; }
+
+.vocabulary-metadata { display: grid; gap: 8px; width: 100%; margin: 16px 0 0; text-align: left; }
+.vocabulary-metadata > div { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(0, 2fr); gap: 12px; }
+.vocabulary-metadata dt { color: var(--muted); font-size: 11px; font-weight: 500; }
+.vocabulary-metadata dd { margin: 0; font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.vocabulary-card > .vocabulary-metadata { padding: 0 22px 18px; }
+.detail-dialog .vocabulary-metadata { display: grid; }
+.flashcard.flip-mode { display: grid; }
+.flashcard.flip-mode .card-face { position: relative; inset: auto; grid-area: 1 / 1; }
+.flashcard.flip-mode.revealed .card-front { visibility: hidden; }

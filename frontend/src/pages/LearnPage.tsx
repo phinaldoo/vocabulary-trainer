@@ -1,3 +1,4 @@
+import { CardMetadata } from '../components/CardMetadata';
 import {
   ArrowLeft,
   ArrowRight,
@@ -301,7 +302,6 @@ function Study({ session, setSession, leave }: { session: StudySession; setSessi
   const resultVisible = session.input_mode === 'typing' ? checked !== null : revealed;
   const promptLabel = card.direction === 'forward' ? session.front_label : session.back_label;
   const answerLabel = card.direction === 'forward' ? session.back_label : session.front_label;
-  const metadataText = Object.values(card.metadata).filter((value): value is string => typeof value === 'string').slice(0, 3).join(' · ');
 
   return (
     <main className="study-shell">
@@ -313,9 +313,9 @@ function Study({ session, setSession, leave }: { session: StudySession; setSessi
             <div className="card-meta"><span>{promptLabel}</span>{card.is_new && <em>{t('learn.newCard')}</em>}</div>
             <p>{t('learn.question', { language: answerLabel })}</p>
             <h1 lang={card.prompt_language}>{card.prompt}</h1>
-            {metadataText && <small>{metadataText}</small>}
+            <CardMetadata metadata={card.metadata} />
           </div>
-          {session.input_mode === 'reveal' && revealed && <div className="card-face card-back"><div className="card-meta"><span>{t('learn.solution', { language: answerLabel })}</span><CheckCircle2 /></div><p>{t('learn.solutionIs')}</p><h2 lang={card.answer_language}>{solution}</h2><small>{metadataText || t('learn.honestRating')}</small></div>}
+          {session.input_mode === 'reveal' && revealed && <div className="card-face card-back"><div className="card-meta"><span>{t('learn.solution', { language: answerLabel })}</span><CheckCircle2 /></div><p>{t('learn.solutionIs')}</p><h2 lang={card.answer_language}>{solution}</h2><CardMetadata metadata={card.metadata} /><small>{t('learn.honestRating')}</small></div>}
         </div>
 
         {session.input_mode === 'typing' && !checked && <form className="answer-form" onSubmit={check}><label htmlFor="answer">{t('learn.yourAnswer')}</label><div><input ref={inputRef} id="answer" autoComplete="off" value={answer} onChange={(event) => setAnswer(event.target.value)} placeholder={t('learn.answerPlaceholder', { language: answerLabel })} /><button className="button primary" disabled={!answer.trim() || submitting}>{t('learn.check')} <ArrowRight /></button></div></form>}
