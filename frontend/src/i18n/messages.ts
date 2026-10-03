@@ -2,6 +2,7 @@ import type { UiLanguage } from '../types';
 
 // Key, English, Simplified Chinese, Hindi, Spanish, German.
 export const messageRows = [
+  ["learn.randomPractice", "Random practice · all chapters", "随机练习 · 所有章节", "यादृच्छिक अभ्यास · सभी अध्याय", "Práctica aleatoria · todos los capítulos", "Zufällig üben · alle Kapitel"],
   ["cards.view", "Display", "显示方式", "दृश्य", "Vista", "Darstellung"],
   ["cards.viewGrid", "Cards", "卡片", "कार्ड", "Tarjetas", "Karten"],
   ["cards.viewList", "List", "列表", "सूची", "Lista", "Liste"],

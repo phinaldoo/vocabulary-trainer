@@ -8,6 +8,7 @@ import { I18nProvider } from '../i18n';
 
 const mockApi = vi.hoisted(() => vi.fn());
 const mockUpdateUser = vi.hoisted(() => vi.fn());
+const mockPreference = vi.hoisted(() => ({ selection: 'scheduled' }));
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -25,6 +26,7 @@ vi.mock('../auth/AuthContext', () => ({
       daily_goal: 12,
       direction: 'forward',
       input_mode: 'typing',
+      selection_mode: mockPreference.selection,
       selected_deck_id: 'deck-1',
       selected_section_id: null,
       created_at: '2026-08-30T10:00:00Z',
@@ -64,6 +66,7 @@ describe('Lernmodus', () => {
     cleanup();
     mockApi.mockReset();
     mockUpdateUser.mockReset();
+    mockPreference.selection = 'scheduled';
     mockApi.mockImplementation((path: string, options?: RequestInit) => {
       if (path === '/decks') return Promise.resolve([deck]);
       if (path === '/sections?deck_id=deck-1') return Promise.resolve([section]);
@@ -95,6 +98,21 @@ describe('Lernmodus', () => {
     const displayedSolution = container.querySelector('.answer-result-copy span[lang]');
     expect(displayedSolution?.textContent).toBe(solution);
     expect(Array.from(displayedSolution!.querySelectorAll('b'), (element) => element.textContent)).toEqual(bold);
+  });
+
+  it('restores the saved random preference and sends it when starting', async () => {
+    mockPreference.selection = 'random';
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen']}><LearnPage /></MemoryRouter></I18nProvider>);
+    expect(await screen.findByRole('combobox', { name: 'Card selection' })).toHaveValue('random');
+    await user.click(await screen.findByRole('button', { name: /Start learning/ }));
+    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledWith(expect.objectContaining({ selection_mode: 'random' })));
+  });
+
+  it('allows a scheduled link to override a saved random preference', async () => {
+    mockPreference.selection = 'random';
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?selection=scheduled']}><LearnPage /></MemoryRouter></I18nProvider>);
+    expect(await screen.findByRole('combobox', { name: 'Card selection' })).toHaveValue('scheduled');
   });
 
   it.each(['random', 'adaptive'] as const)('starts %s practice across all sections', async (selectionMode) => {

@@ -238,3 +238,10 @@ view or the detail dialog. This personal setting does not create a review or cha
 another learner's progress. Adaptive random practice multiplies the normal weight by
 0.5 / 1 / 2 for Easy / Normal / Hard; Automatic uses review history alone. Fully random
 practice stays uniform. Apply `alembic upgrade head` to create the preference table.
+
+The chosen selection mode is saved with your account when you start a session and
+can also be changed in Settings. The dashboard's **Random practice · all chapters**
+shortcut opens fully random practice across the current deck, independent of a
+previous chapter filter. Explicit study links override the saved mode. Uniform
+random practice samples directly from all eligible cards, then stores that shuffled
+selection so resuming cannot silently reorder a session.
