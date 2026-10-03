@@ -245,3 +245,13 @@ shortcut opens fully random practice across the current deck, independent of a
 previous chapter filter. Explicit study links override the saved mode. Uniform
 random practice samples directly from all eligible cards, then stores that shuffled
 selection so resuming cannot silently reorder a session.
+
+### Repeat mistakes
+
+Scheduled practice starts with the learner's last incorrect/Again answers, including
+ones whose ten-minute interval has not elapsed, before due and unseen cards. Select
+**Mistakes only** to practice just those words, or use **Repeat mistakes** after a
+session. Both paths respect the chosen deck, chapters and translation direction;
+a vocabulary appears at most once per session. A subsequent correct/Good answer
+(including an explicitly accepted typing answer) removes it from the mistake queue.
+Fully random and adaptive random keep their own sampling rules.

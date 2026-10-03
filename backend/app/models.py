@@ -38,7 +38,7 @@ class User(Base):
         ),
         CheckConstraint("input_mode IN ('typing', 'reveal')", name="users_input_mode_check"),
         CheckConstraint(
-            "selection_mode IN ('scheduled', 'random', 'adaptive')",
+            "selection_mode IN ('scheduled', 'random', 'adaptive', 'mistakes')",
             name="users_selection_mode_check",
         ),
         CheckConstraint("role IN ('user', 'admin')", name="users_role_check"),
@@ -245,6 +245,10 @@ class StudySession(Base):
             name="study_sessions_input_mode_check",
         ),
         CheckConstraint("target_count BETWEEN 1 AND 50", name="study_sessions_target_check"),
+        CheckConstraint(
+            "selection_mode IN ('scheduled', 'random', 'adaptive', 'mistakes')",
+            name="study_sessions_selection_mode_check",
+        ),
         Index("idx_study_sessions_user_started", "user_id", "started_at"),
     )
 

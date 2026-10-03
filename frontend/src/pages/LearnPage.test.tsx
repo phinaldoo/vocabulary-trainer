@@ -100,6 +100,28 @@ describe('Lernmodus', () => {
     expect(Array.from(displayedSolution!.querySelectorAll('b'), (element) => element.textContent)).toEqual(bold);
   });
 
+  it('opens mistake practice with the completed session chapter selection', async () => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => path === '/study-sessions/session-1'
+      ? Promise.resolve({ ...session, reviewed: 1, correct_reviewed: 0, complete: true, cards: [] })
+      : original(path, options));
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await user.click(await screen.findByRole('button', { name: 'Repeat mistakes' }));
+    expect(await screen.findByRole('combobox', { name: 'Card selection' })).toHaveValue('mistakes');
+    expect(screen.getByRole('button', { name: /Generated samples/ })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('explains when there are no mistakes in the selected scope', async () => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => path === '/study-sessions/session-1'
+      ? Promise.resolve({ ...session, selection_mode: 'mistakes', total: 0, complete: true, cards: [] })
+      : original(path, options));
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    expect(await screen.findByRole('heading', { name: 'No mistakes to repeat' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Repeat mistakes' })).not.toBeInTheDocument();
+  });
+
   it('restores the saved random preference and sends it when starting', async () => {
     mockPreference.selection = 'random';
     const user = userEvent.setup();
