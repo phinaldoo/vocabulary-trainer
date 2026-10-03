@@ -105,8 +105,8 @@ describe('Adminbereich', () => {
     });
     const user = userEvent.setup();
     render(<I18nProvider><MemoryRouter><AdminPage /></MemoryRouter></I18nProvider>);
-    await user.click(await screen.findByRole('button', { name: 'Card', exact: true }));
-    for (const [label, value] of [['Stable card ID', 'test-card'], ['Front', 'rosa'], ['Back', 'Rose'], ['Gender', 'f.'], ['Part of speech', 'noun'], ['Additional information', 'First declension'], ['Additional information 2', 'Example sentence']]) {
+    await user.click(await screen.findByRole('button', { name: 'Card' }));
+    for (const [label, value] of [['Stable card ID', 'test-card'], ['Front', 'rosa'], ['Back', 'Rose'], ['Gender', 'f.'], ['Part of speech', 'noun'], ['Additional information', 'First declension'], ['Additional information 2', 'Example sentence']] as const) {
       await user.type(screen.getByLabelText(label, { exact: true }), value!);
     }
     const extra = screen.getByLabelText('Other metadata (JSON)');
