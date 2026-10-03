@@ -12,6 +12,7 @@ from app.models import Card, Deck, Section, UserCardPreference, UserCardProgress
 from app.schemas import CardPublic, DeckPublic, DifficultyUpdate, PaginatedCards, SectionPublic
 from app.services.analytics import progress_data
 from app.services.catalogue import deck_public, published_decks, resolve_published_deck
+from app.services.study import lock_learning_state
 
 router = APIRouter(tags=["catalog"])
 
@@ -233,8 +234,7 @@ async def set_card_difficulty(
     if not card:
         raise ApiError(404, "card_not_found", "Diese Karte gibt es nicht.")
     # Serialize preference updates for this learner, including concurrent inserts.
-    from app.models import User
-    await db.scalar(select(User).where(User.id == auth.user.id).with_for_update())
+    await lock_learning_state(db, auth.user.id)
     preference = await db.get(UserCardPreference, (auth.user.id, card_id))
     if payload.difficulty == "auto":
         if preference:

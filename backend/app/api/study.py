@@ -28,6 +28,7 @@ from app.services.study import (
     create_study_session,
     get_owned_item,
     get_study_session,
+    lock_learning_state,
 )
 
 router = APIRouter(prefix="/study-sessions", tags=["study"])
@@ -102,6 +103,7 @@ async def check_answer(
     db: Database,
     response: Response,
 ) -> AnswerCheckResponse:
+    await lock_learning_state(db, auth.user.id)
     study_session, item = await get_owned_item(
         db, auth.user.id, session_id, payload.item_id, for_update=True
     )
@@ -136,6 +138,7 @@ async def reveal_answer(
     db: Database,
     response: Response,
 ) -> RevealResponse:
+    await lock_learning_state(db, auth.user.id)
     study_session, item = await get_owned_item(
         db, auth.user.id, session_id, item_id, for_update=True
     )
@@ -158,6 +161,7 @@ async def review(
     response: Response,
 ) -> ReviewResult:
     user_id = auth.user.id
+    await lock_learning_state(db, user_id)
     request_data = payload.model_dump(mode="json")
     request_hash = hashlib.sha256(
         json.dumps(request_data, sort_keys=True, separators=(",", ":")).encode()

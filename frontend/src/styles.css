@@ -693,3 +693,13 @@ kbd { border: 1px solid rgb(0 0 0 / 12%); border-radius: 5px; background: rgb(25
 
 .random-practice-link { margin-left: 10px; margin-top: 10px; }
 @media (max-width: 600px) { .random-practice-link { margin-left: 0; } }
+
+.reset-progress-card { padding: 22px; margin-top: 20px; }
+.reset-progress-card header { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 18px; }
+.reset-progress-card h2 { margin: 0 0 6px; font-size: 17px; }
+.reset-progress-card p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.reset-progress-dialog > p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+.reset-scope { display: grid; gap: 8px; margin: 18px 0; }
+.reset-scope select { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: white; }
+.reset-confirm { display: flex; align-items: flex-start; gap: 10px; margin-top: 20px; font-size: 13px; line-height: 1.5; }
+.reset-confirm input { margin-top: 3px; flex-shrink: 0; }
