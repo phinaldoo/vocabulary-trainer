@@ -1,3 +1,4 @@
+import { extraMetadata, metadataFields, metadataValues, type MetadataValues } from '../lib/vocabularyMetadata';
 import {
   Archive,
   ArrowLeft,
@@ -62,12 +63,13 @@ type CardForm = {
   front_answers: string;
   back_answers: string;
   metadata: string;
+  details: MetadataValues;
   active: boolean;
 };
 
 const emptyCard: CardForm = {
   stable_key: '', section_id: '', sort_order: 1, front_text: '', back_text: '',
-  front_answers: '', back_answers: '', metadata: '{}', active: true,
+  front_answers: '', back_answers: '', metadata: '{}', details: metadataValues({}), active: true,
 };
 
 function nullable(value: string) {
@@ -246,7 +248,8 @@ export function AdminPage() {
       back_text: card.back_text,
       front_answers: card.front_answers.join('\n'),
       back_answers: card.back_answers.join('\n'),
-      metadata: JSON.stringify(card.metadata, null, 2),
+      metadata: JSON.stringify(extraMetadata(card.metadata), null, 2),
+      details: metadataValues(card.metadata),
       active: card.active,
     } : { ...emptyCard, sort_order: (cards.data?.total ?? 0) + 1, section_id: sections.data?.[0]?.id ?? '' });
   }
@@ -264,7 +267,10 @@ export function AdminPage() {
         back_text: cardForm.back_text,
         front_answers: aliases(cardForm.front_answers),
         back_answers: aliases(cardForm.back_answers),
-        metadata: parsedMetadata,
+        metadata: {
+          ...extraMetadata(parsedMetadata as Record<string, unknown>),
+          ...Object.fromEntries(Object.entries(cardForm.details).filter(([, value]) => value.trim()).map(([key, value]) => [key, value.trim()])),
+        },
         ...(cardEdit ? { active: cardForm.active } : {}),
       };
       const path = cardEdit ? `/admin/decks/${selectedDeck.id}/cards/${cardEdit.id}` : `/admin/decks/${selectedDeck.id}/cards`;
@@ -358,5 +364,5 @@ function DeckFields({ form, setForm, includeSlug = false }: { form: DeckForm; se
 function CardEditor({ form, setForm, editing, deck, sections, busy, onSubmit, onCancel }: { form: CardForm; setForm(value: CardForm): void; editing: boolean; deck: Deck; sections: Section[]; busy: boolean; onSubmit(event: FormEvent<HTMLFormElement>): void; onCancel(): void }) {
   const { t } = useI18n();
   const field = (name: keyof CardForm) => ({ value: String(form[name]), onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setForm({ ...form, [name]: event.target.value }) });
-  return <form className="card-editor" onSubmit={onSubmit}><div className="admin-form-grid"><label><span>{t('admin.stableCardId')}</span><input {...field('stable_key')} disabled={editing} required pattern="[A-Za-z0-9][A-Za-z0-9._:-]*" /></label><label><span>{t('admin.section')}</span><div className="select-wrap"><select {...field('section_id')}><option value="">{t('common.noSection')}</option>{sections.map((section) => <option value={section.id} key={section.id}>{section.title}</option>)}</select><ChevronDown /></div></label><label><span>{t('admin.order')}</span><input type="number" min={1} value={form.sort_order} onChange={(event) => setForm({ ...form, sort_order: Number(event.target.value) })} required /></label><label className="wide"><span>{deck.front_label}</span><textarea {...field('front_text')} rows={2} required /></label><label className="wide"><span>{deck.back_label}</span><textarea {...field('back_text')} rows={2} required /></label><label><span>{t('admin.additionalAnswers', { side: deck.front_label })}</span><textarea {...field('front_answers')} rows={4} placeholder={t('admin.oneAlternativeLine')} /></label><label><span>{t('admin.additionalAnswers', { side: deck.back_label })}</span><textarea {...field('back_answers')} rows={4} placeholder={t('admin.oneAlternativeLine')} /></label><label className="wide"><span>{t('admin.metadata')}</span><textarea {...field('metadata')} rows={5} spellCheck={false} /></label>{editing && <label className="checkbox-field"><input type="checkbox" checked={form.active} onChange={(event) => setForm({ ...form, active: event.target.checked })} /><span>{t('admin.cardActive')}</span></label>}</div><div className="admin-actions"><button type="button" className="button secondary" onClick={onCancel}>{t('common.cancel')}</button><button className="button primary" disabled={busy}><Save /> {t('admin.saveCard')}</button></div></form>;
+  return <form className="card-editor" onSubmit={onSubmit}><div className="admin-form-grid"><label><span>{t('admin.stableCardId')}</span><input {...field('stable_key')} disabled={editing} required pattern="[A-Za-z0-9][A-Za-z0-9._:-]*" /></label><label><span>{t('admin.section')}</span><div className="select-wrap"><select {...field('section_id')}><option value="">{t('common.noSection')}</option>{sections.map((section) => <option value={section.id} key={section.id}>{section.title}</option>)}</select><ChevronDown /></div></label><label><span>{t('admin.order')}</span><input type="number" min={1} value={form.sort_order} onChange={(event) => setForm({ ...form, sort_order: Number(event.target.value) })} required /></label><label className="wide"><span>{deck.front_label}</span><textarea {...field('front_text')} rows={2} required /></label><label className="wide"><span>{deck.back_label}</span><textarea {...field('back_text')} rows={2} required /></label><label><span>{t('admin.additionalAnswers', { side: deck.front_label })}</span><textarea {...field('front_answers')} rows={4} placeholder={t('admin.oneAlternativeLine')} /></label><label><span>{t('admin.additionalAnswers', { side: deck.back_label })}</span><textarea {...field('back_answers')} rows={4} placeholder={t('admin.oneAlternativeLine')} /></label>{metadataFields.map(({ key, label }) => <label key={key}><span>{t(label)}</span><textarea rows={key.startsWith('additional') ? 3 : 1} maxLength={2000} value={form.details[key]} onChange={(event) => setForm({ ...form, details: { ...form.details, [key]: event.target.value } })} /></label>)}<label className="wide"><span>{t('metadata.extra')}</span><textarea {...field('metadata')} rows={5} spellCheck={false} /></label>{editing && <label className="checkbox-field"><input type="checkbox" checked={form.active} onChange={(event) => setForm({ ...form, active: event.target.checked })} /><span>{t('admin.cardActive')}</span></label>}</div><div className="admin-actions"><button type="button" className="button secondary" onClick={onCancel}>{t('common.cancel')}</button><button className="button primary" disabled={busy}><Save /> {t('admin.saveCard')}</button></div></form>;
 }

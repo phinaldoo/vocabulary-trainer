@@ -16,9 +16,15 @@ from app.models import (
     StudySession,
     StudySessionItem,
     User,
+    UserCardPreference,
     UserCardProgress,
 )
 from app.schemas import StudyCard, StudySessionCreate, StudySessionPublic
+
+
+async def lock_learning_state(db: AsyncSession, user_id: uuid.UUID) -> None:
+    """Serialize reset, session creation and reviews for a learner on PostgreSQL."""
+    await db.scalar(select(User.id).where(User.id == user_id).with_for_update())
 
 
 def direction_for(card: Card, setting: str) -> str:
@@ -62,7 +68,19 @@ def random_selection(
     cards: list[Card],
     progress_map: dict[tuple[uuid.UUID, str], UserCardProgress],
     payload: StudySessionCreate,
+    difficulties: dict[uuid.UUID, str] | None = None,
 ) -> list[tuple[Card, str, int]]:
+    if payload.selection_mode == "random":
+        selected = []
+        for card in random.sample(cards, min(payload.limit, len(cards))):
+            direction = (
+                random.choice(["forward", "reverse"])
+                if payload.direction == "mixed" else payload.direction
+            )
+            progress = progress_map.get((card.id, direction))
+            selected.append((card, direction, progress.version if progress else 0))
+        return selected
+
     # An exponential race samples without replacement in weighted random order.
     # In mixed mode, average both directions for card selection, then favor the
     # weaker direction. Each vocabulary appears at most once in a session.
@@ -75,6 +93,11 @@ def random_selection(
             else 1.0
             for direction in directions
         ]
+        if payload.selection_mode == "adaptive":
+            multiplier = {"easy": 0.5, "normal": 1.0, "hard": 2.0}.get(
+                (difficulties or {}).get(card.id, "auto"), 1.0,
+            )
+            weights = [weight * multiplier for weight in weights]
         direction = random.choices(directions, weights=weights, k=1)[0]
         progress = progress_map.get((card.id, direction))
         priority = random.expovariate(sum(weights) / len(weights))
@@ -90,6 +113,7 @@ async def create_study_session(
     user: User,
     payload: StudySessionCreate,
 ) -> StudySessionPublic:
+    await lock_learning_state(db, user.id)
     deck = await db.scalar(
         select(Deck).where(Deck.id == payload.deck_id, Deck.status == "published")
     )
@@ -140,8 +164,16 @@ async def create_study_session(
     selected: list[tuple[Card, str, int]] = []
     selected_keys: set[tuple[uuid.UUID, str]] = set()
     selected_card_ids: set[uuid.UUID] = set()
-    if payload.selection_mode == "scheduled":
-        for row in due:
+    if payload.selection_mode in {"scheduled", "mistakes"}:
+        mistakes = [
+            row for row in progress if row.last_rating == 0
+            and (payload.direction == "mixed" or row.direction == payload.direction)
+        ]
+        mistakes.sort(key=lambda row: (
+            _aware(row.last_reviewed_at or row.due_at), str(row.card_id), row.direction,
+        ))
+        review_queue = mistakes + (due if payload.selection_mode == "scheduled" else [])
+        for row in review_queue:
             card = by_id.get(row.card_id)
             key = (row.card_id, row.direction)
             if not card or key in selected_keys or card.id in selected_card_ids:
@@ -152,7 +184,7 @@ async def create_study_session(
             if len(selected) == payload.limit:
                 break
 
-        if len(selected) < payload.limit:
+        if payload.selection_mode == "scheduled" and len(selected) < payload.limit:
             for card in cards:
                 direction = direction_for(card, payload.direction)
                 key = (card.id, direction)
@@ -164,7 +196,12 @@ async def create_study_session(
                 if len(selected) == payload.limit:
                     break
     else:
-        selected = random_selection(cards, progress_map, payload)
+        preferences = await db.scalars(select(UserCardPreference).where(
+            UserCardPreference.user_id == user.id, UserCardPreference.card_id.in_(ids),
+        ))
+        selected = random_selection(
+            cards, progress_map, payload, {row.card_id: row.difficulty for row in preferences},
+        )
 
     study_session = StudySession(
         user_id=user.id,
@@ -204,6 +241,7 @@ async def create_study_session(
     user.selected_section_ids = [str(value) for value in section_ids]
     user.direction = payload.direction
     user.input_mode = payload.input_mode
+    user.selection_mode = payload.selection_mode
     await db.commit()
     return await get_study_session(db, user.id, study_session.id)
 
