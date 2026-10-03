@@ -11,7 +11,7 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, ApiError, createIdempotencyKey } from '../api/client';
 import { useResource } from '../api/useResource';
@@ -204,16 +204,6 @@ function Study({ session, setSession, leave }: { session: StudySession; setSessi
     return () => { mountedRef.current = false; };
   }, []);
 
-  const resetCard = useCallback(() => {
-    setAnswer(''); setChecked(null); setRevealed(false); setSolution(''); setError('');
-    reviewAttemptRef.current = null;
-    inFlightRef.current = false;
-    startedAt.current = Date.now();
-    requestAnimationFrame(() => inputRef.current?.focus());
-  }, []);
-
-  useEffect(() => { resetCard(); }, [card?.item_id, resetCard]);
-
   async function check(event: FormEvent) {
     event.preventDefault();
     if (!card || !answer.trim() || inFlightRef.current) return;
@@ -270,11 +260,14 @@ function Study({ session, setSession, leave }: { session: StudySession; setSessi
     } finally { inFlightRef.current = false; if (mountedRef.current) setSubmitting(false); }
   }
 
-  useEffect(() => {
-    if (!checked && !revealed) return;
-    const frame = requestAnimationFrame(() => actionRef.current?.focus());
-    return () => cancelAnimationFrame(frame);
-  }, [checked, revealed]);
+  // Focus only after the relevant input/button has committed and is enabled.
+  // Each session item mounts its own Study instance, so stale effects cannot
+  // restore focus to the previous card after an asynchronous review.
+  useLayoutEffect(() => {
+    if (submitting) return;
+    const target = checked || revealed ? actionRef.current : inputRef.current;
+    target?.focus();
+  }, [checked, revealed, submitting]);
 
   useEffect(() => {
     function shortcut(event: KeyboardEvent) {
@@ -388,7 +381,7 @@ export function LearnPage() {
 
   if (resumeError) return <PageError message={resumeError} retry={() => setParams({}, { replace: true })} />;
   if (sessionId && !session) return <PageLoading label={t('learn.sessionLoading')} />;
-  if (session) return <Study session={session} setSession={setSession} leave={leave} />;
+  if (session) return <Study key={`${session.id}:${session.cards[0]?.item_id ?? "complete"}`} session={session} setSession={setSession} leave={leave} />;
   if (decks.loading) return <PageLoading label={t('common.decksLoading')} />;
   if (!decks.data) return <PageError message={decks.error} retry={() => void decks.reload()} />;
   if (decks.data.length === 0) return <main className="page-wrap"><section className="empty-state panel"><Layers3 /><h2>{t('cards.noDeck')}</h2><p>{t('learn.emptyDecksText')}</p></section></main>;
