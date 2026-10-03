@@ -1,4 +1,5 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { StrictMode } from 'react';
 import userEvent from '@testing-library/user-event';
 import { Link, MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -7,6 +8,7 @@ import { I18nProvider } from '../i18n';
 
 const mockApi = vi.hoisted(() => vi.fn());
 const mockUpdateUser = vi.hoisted(() => vi.fn());
+const mockPreference = vi.hoisted(() => ({ selection: 'scheduled' }));
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -24,6 +26,7 @@ vi.mock('../auth/AuthContext', () => ({
       daily_goal: 12,
       direction: 'forward',
       input_mode: 'typing',
+      selection_mode: mockPreference.selection,
       selected_deck_id: 'deck-1',
       selected_section_id: null,
       created_at: '2026-08-30T10:00:00Z',
@@ -63,6 +66,7 @@ describe('Lernmodus', () => {
     cleanup();
     mockApi.mockReset();
     mockUpdateUser.mockReset();
+    mockPreference.selection = 'scheduled';
     mockApi.mockImplementation((path: string, options?: RequestInit) => {
       if (path === '/decks') return Promise.resolve([deck]);
       if (path === '/sections?deck_id=deck-1') return Promise.resolve([section]);
@@ -71,6 +75,162 @@ describe('Lernmodus', () => {
       if (path.endsWith('/reveal')) return Promise.resolve({ solution: 'qarilo-82' });
       throw new Error(`Unerwarteter API-Aufruf: ${path}`);
     });
+  });
+
+  it.each([
+    { answer: 'gehen', solution: 'gehen, laufen (zu Fuß)', bold: ['gehen'] },
+    { answer: '  GEHEN  ', solution: 'gehen, gehen lassen', bold: ['gehen', 'gehen'] },
+    { answer: 'zu   Fuß', solution: 'gehen (zu Fuß)', bold: ['zu Fuß'] },
+    { answer: 'a+b', solution: 'a+b; ab', bold: ['a+b'] },
+    { answer: 'falsch', solution: 'gehen, laufen', bold: [] },
+  ])('highlights only the entered text in the solution: $answer', async ({ answer, solution, bold }) => {
+    const defaultImplementation = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => {
+      if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, input_mode: 'typing' });
+      if (path.endsWith('/check')) return Promise.resolve({ correct: bold.length > 0, solution, match_kind: null });
+      return defaultImplementation(path, options);
+    });
+    const user = userEvent.setup();
+    const { container } = render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await user.type(await screen.findByRole('textbox', { name: 'Your answer' }), answer);
+    await user.click(screen.getByRole('button', { name: 'Check' }));
+    await screen.findByText(/The answer is:/);
+    const displayedSolution = container.querySelector('.answer-result-copy span[lang]');
+    expect(displayedSolution?.textContent).toBe(solution);
+    expect(Array.from(displayedSolution!.querySelectorAll('b'), (element) => element.textContent)).toEqual(bold);
+  });
+
+  it('opens mistake practice with the completed session chapter selection', async () => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => path === '/study-sessions/session-1'
+      ? Promise.resolve({ ...session, reviewed: 1, correct_reviewed: 0, complete: true, cards: [] })
+      : original(path, options));
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await user.click(await screen.findByRole('button', { name: 'Repeat mistakes' }));
+    expect(await screen.findByRole('combobox', { name: 'Card selection' })).toHaveValue('mistakes');
+    expect(screen.getByRole('button', { name: /Generated samples/ })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('explains when there are no mistakes in the selected scope', async () => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => path === '/study-sessions/session-1'
+      ? Promise.resolve({ ...session, selection_mode: 'mistakes', total: 0, complete: true, cards: [] })
+      : original(path, options));
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    expect(await screen.findByRole('heading', { name: 'No mistakes to repeat' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Repeat mistakes' })).not.toBeInTheDocument();
+  });
+
+  it('restores the saved random preference and sends it when starting', async () => {
+    mockPreference.selection = 'random';
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen']}><LearnPage /></MemoryRouter></I18nProvider>);
+    expect(await screen.findByRole('combobox', { name: 'Card selection' })).toHaveValue('random');
+    await user.click(await screen.findByRole('button', { name: /Start learning/ }));
+    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalledWith(expect.objectContaining({ selection_mode: 'random' })));
+  });
+
+  it('allows a scheduled link to override a saved random preference', async () => {
+    mockPreference.selection = 'random';
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?selection=scheduled']}><LearnPage /></MemoryRouter></I18nProvider>);
+    expect(await screen.findByRole('combobox', { name: 'Card selection' })).toHaveValue('scheduled');
+  });
+
+  it.each(['random', 'adaptive'] as const)('starts %s practice across all sections', async (selectionMode) => {
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?deck=deck-1&section=section-49']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await screen.findByRole('button', { name: /All sections/ });
+    await user.click(screen.getByRole('button', { name: /All sections/ }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Card selection' }), selectionMode);
+    await user.click(screen.getByRole('button', { name: /Start learning/ }));
+    await screen.findByRole('heading', { name: 'nuvexa-47' });
+    const call = mockApi.mock.calls.find(([path]) => path === '/study-sessions');
+    expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({
+      deck_id: 'deck-1', section_id: null, selection_mode: selectionMode,
+    });
+  });
+
+  it('toggles multiple sections, retains hidden selections, and starts their union', async () => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => path === '/sections?deck_id=deck-1'
+      ? Promise.resolve([section, { ...section, id: 'section-50', title: 'More samples' }])
+      : original(path, options));
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?deck=deck-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await user.click(await screen.findByRole('button', { name: /Generated samples/ }));
+    await user.type(screen.getByPlaceholderText(/Search sections/), 'More');
+    await user.click(screen.getByRole('button', { name: /More samples/ }));
+    await user.clear(screen.getByPlaceholderText(/Search sections/));
+    expect(screen.getByRole('button', { name: /Generated samples/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /More samples/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /All sections/ })).toHaveAttribute('aria-pressed', 'false');
+    await user.click(screen.getByRole('button', { name: /Start learning/ }));
+    await screen.findByRole('heading', { name: 'nuvexa-47' });
+    const call = mockApi.mock.calls.find(([path]) => path === '/study-sessions');
+    expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ section_id: null, section_ids: ['section-49', 'section-50'] });
+    expect(mockUpdateUser).toHaveBeenCalledWith(expect.objectContaining({ selected_section_ids: ['section-49', 'section-50'] }));
+  });
+
+  it('restores repeated section links and resets to all when the last section is deselected', async () => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => path === '/sections?deck_id=deck-1'
+      ? Promise.resolve([section, { ...section, id: 'section-50', title: 'More samples' }])
+      : original(path, options));
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?deck=deck-1&section=section-49&section=section-50']}><LearnPage /></MemoryRouter></I18nProvider>);
+    expect(await screen.findByRole('button', { name: /Generated samples/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /More samples/ })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: /Generated samples/ }));
+    expect(screen.getByRole('button', { name: /More samples/ })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: /More samples/ }));
+    expect(screen.getByRole('button', { name: /All sections/ })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('restores multiple sections after a completed session', async () => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => {
+      if (path === '/sections?deck_id=deck-1') return Promise.resolve([section, { ...section, id: 'section-50', title: 'More samples' }]);
+      if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, section_id: null, section_ids: ['section-49', 'section-50'], section_titles: ['Generated samples', 'More samples'], complete: true, cards: [] });
+      return original(path, options);
+    });
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await user.click(await screen.findByRole('button', { name: /New session/ }));
+    expect(await screen.findByRole('button', { name: /Generated samples/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /More samples/ })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('clears selected sections when switching decks', async () => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => {
+      if (path === '/decks') return Promise.resolve([deck, { ...deck, id: 'deck-2', title: 'Second deck' }]);
+      if (path === '/sections?deck_id=deck-2') return Promise.resolve([{ ...section, deck_id: 'deck-2', id: 'section-60', title: 'Other section' }]);
+      return original(path, options);
+    });
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?deck=deck-1&section=section-49']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await screen.findByRole('button', { name: /Generated samples/ });
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Deck' }), 'deck-2');
+    await screen.findByRole('button', { name: /Other section/ });
+    expect(screen.getByRole('button', { name: /All sections/ })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: /Start learning/ }));
+    await screen.findByRole('heading', { name: 'nuvexa-47' });
+    const call = mockApi.mock.calls.find(([path]) => path === '/study-sessions');
+    expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ deck_id: 'deck-2', section_ids: [] });
+  });
+
+  it('keeps adaptive selection when starting another session', async () => {
+    mockApi.mockImplementation((path: string) => {
+      if (path === '/decks') return Promise.resolve([deck]);
+      if (path === '/sections?deck_id=deck-1') return Promise.resolve([section]);
+      if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, selection_mode: 'adaptive', complete: true, cards: [] });
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await user.click(await screen.findByRole('button', { name: /New session/ }));
+    expect(await screen.findByRole('combobox', { name: 'Card selection' })).toHaveValue('adaptive');
   });
 
   it('bindet Deck und Abschnitt an die Session und zeigt die Lösung erst nach dem Wenden', async () => {
@@ -109,6 +269,135 @@ describe('Lernmodus', () => {
     await waitFor(() => expect(screen.getAllByRole('button', { name: /know|knew/i })).toHaveLength(2));
   });
 
+  it.each(['typing', 'reveal'])('shows every metadata field in %s mode', async (mode) => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => {
+      if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, input_mode: mode,
+        cards: [{ ...session.cards[0], metadata: { gender: 'f.', part_of_speech: 'noun', additional_info: 'Note one', additional_info_2: 'Note two' } }],
+      });
+      return original(path, options);
+    });
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    expect(await screen.findByText('Note two')).toBeInTheDocument();
+    expect(screen.getByText('Gender')).toBeInTheDocument();
+    expect(screen.getByText('Part of speech')).toBeInTheDocument();
+    expect(screen.getByText('Additional information')).toBeInTheDocument();
+    expect(screen.getByText('Additional information 2')).toBeInTheDocument();
+  });
+
+  it('accepts a rejected answer explicitly and includes it in completion accuracy', async () => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => {
+      if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, input_mode: 'typing' });
+      if (path.endsWith('/check')) return Promise.resolve({ correct: false, solution: 'qarilo-82', match_kind: null });
+      if (path.endsWith('/reviews')) return Promise.resolve({ reviewed: 1, correct_reviewed: 1, complete: true });
+      return original(path, options);
+    });
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await user.type(await screen.findByRole('textbox'), 'valid alternative{Enter}');
+    await user.click(await screen.findByRole('button', { name: 'My answer was correct' }));
+    expect(await screen.findByText('100%')).toBeInTheDocument();
+    const reviews = mockApi.mock.calls.filter(([path]) => path.endsWith('/reviews'));
+    expect(reviews).toHaveLength(1);
+    expect(JSON.parse(String(reviews[0]?.[1]?.body)).response).toEqual({
+      type: 'typing', answer: 'valid alternative', rating: 2, accept_as_correct: true,
+    });
+  });
+
+  it('keeps focus across delayed checks, failed saves, and consecutive cards in StrictMode', async () => {
+    let resolveCheck!: (value: unknown) => void;
+    let rejectReview!: (reason: Error) => void;
+    let resolveReview!: (value: unknown) => void;
+    let attempts = 0;
+    mockApi.mockImplementation((path: string) => {
+      if (path === '/decks') return Promise.resolve([deck]);
+      if (path === '/study-sessions/session-1') return Promise.resolve({
+        ...session, input_mode: 'typing', total: 3,
+        cards: [1, 2, 3].map((i) => ({ ...session.cards[0], item_id: `item-${i}`, prompt: `word-${i}` })),
+      });
+      if (path.endsWith('/check')) return new Promise((resolve) => { resolveCheck = resolve; });
+      if (path.endsWith('/reviews')) {
+        attempts += 1;
+        return new Promise((resolve, reject) => { resolveReview = resolve; rejectReview = reject; });
+      }
+      throw new Error(path);
+    });
+    const user = userEvent.setup();
+    render(<StrictMode><I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider></StrictMode>);
+    expect(await screen.findByRole('textbox')).toHaveFocus();
+    for (let i = 1; i <= 2; i += 1) {
+      await user.keyboard(`answer-${i}{Enter}`);
+      expect(screen.getByRole('button', { name: 'Check' })).toBeDisabled();
+      await act(async () => resolveCheck({ correct: true, solution: 'answer', match_kind: 'exact' }));
+      expect(screen.getByRole('button', { name: /Next card/ })).toHaveFocus();
+      await user.keyboard('{Enter}');
+      if (attempts === 1) {
+        await act(async () => rejectReview(new Error('Temporary network error')));
+        expect(screen.getByRole('button', { name: /Next card/ })).toHaveFocus();
+        await user.keyboard('{Enter}');
+      }
+      await act(async () => resolveReview({ reviewed: i, correct_reviewed: i, complete: false }));
+      expect(screen.getByRole('heading', { name: `word-${i + 1}` })).toBeInTheDocument();
+      expect(screen.getByRole('textbox')).toHaveFocus();
+      expect(screen.getByRole('textbox')).toHaveValue('');
+    }
+  });
+
+  it.each([true, false])('advances with Enter after checking an answer (correct: %s)', async (correct) => {
+    const typingSession = {
+      ...session, input_mode: 'typing', total: 2,
+      cards: [session.cards[0], { ...session.cards[0], item_id: 'item-2', prompt: 'next-word' }],
+    };
+    mockApi.mockImplementation((path: string) => {
+      if (path === '/decks') return Promise.resolve([deck]);
+      if (path === '/study-sessions/session-1') return Promise.resolve(typingSession);
+      if (path.endsWith('/check')) return Promise.resolve({ correct, solution: 'qarilo-82', match_kind: null });
+      if (path.endsWith('/reviews')) return Promise.resolve({ reviewed: 1, correct_reviewed: Number(correct), complete: false });
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    const input = await screen.findByRole('textbox');
+    await user.type(input, 'qarilo-82{Enter}');
+    const next = await screen.findByRole('button', { name: /Next card/ });
+    await waitFor(() => expect(next).toHaveFocus());
+    expect(mockApi.mock.calls.filter(([path]) => path.endsWith('/reviews'))).toHaveLength(0);
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('heading', { name: 'next-word' })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('textbox')).toHaveFocus());
+    expect(screen.getByRole('textbox')).toHaveValue('');
+    const reviews = mockApi.mock.calls.filter(([path]) => path.endsWith('/reviews'));
+    expect(reviews).toHaveLength(1);
+    expect(JSON.parse(String(reviews[0]?.[1]?.body))).toMatchObject({
+      item_id: 'item-1', response: { type: 'typing', answer: 'qarilo-82', rating: correct ? 2 : 0 },
+    });
+  });
+
+  it.each(['Enter', 'click'] as const)('finishes the last card using %s without choosing difficulty', async (action) => {
+    mockApi.mockImplementation((path: string) => {
+      if (path === '/decks') return Promise.resolve([deck]);
+      if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, input_mode: 'typing' });
+      if (path.endsWith('/check')) return Promise.resolve({ correct: true, solution: 'qarilo-82', match_kind: 'exact' });
+      if (path.endsWith('/reviews')) return Promise.resolve({ reviewed: 1, correct_reviewed: 1, complete: true });
+      throw new Error(`Unexpected API call: ${path}`);
+    });
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+    await user.type(await screen.findByRole('textbox'), 'qarilo-82{Enter}');
+    const next = await screen.findByRole('button', { name: /Next card/ });
+    await waitFor(() => expect(next).toHaveFocus());
+    if (action === 'click') await user.click(next);
+    else {
+      screen.getByRole('button', { name: /Hard/ }).focus();
+      await user.keyboard('{Enter}');
+    }
+    expect(await screen.findByRole('button', { name: /New session/ })).toBeInTheDocument();
+    const reviews = mockApi.mock.calls.filter(([path]) => path.endsWith('/reviews'));
+    expect(reviews).toHaveLength(1);
+    expect(JSON.parse(String(reviews[0]?.[1]?.body)).response.rating).toBe(2);
+  });
+
   it('verwirft eine geladene Session, wenn die Session-ID aus der URL entfernt wird', async () => {
     const user = userEvent.setup();
     render(
@@ -124,4 +413,24 @@ describe('Lernmodus', () => {
     expect(await screen.findByRole('heading', { name: 'What would you like to study today?' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'nuvexa-47' })).not.toBeInTheDocument();
   });
+});
+
+
+it('shows missing meanings after checking an incomplete typed answer', async () => {
+  mockApi.mockImplementation((path: string) => {
+    if (path === '/decks') return Promise.resolve([deck]);
+    if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, input_mode: 'typing' });
+    if (path.endsWith('/check')) return Promise.resolve({
+      correct: false, solution: 'funkeln (bei Nacht), schimmern',
+      match_kind: null, missing_meanings: ['schimmern'],
+    });
+    throw new Error(`Unexpected API call: ${path}`);
+  });
+  const user = userEvent.setup();
+  render(<I18nProvider><MemoryRouter initialEntries={['/lernen?session=session-1']}><LearnPage /></MemoryRouter></I18nProvider>);
+  await user.type(await screen.findByRole('textbox'), 'funkeln');
+  await user.click(screen.getByRole('button', { name: /Check/ }));
+  expect(await screen.findByText('Not yet complete')).toBeInTheDocument();
+  expect(screen.getByText('Missing meanings:')).toBeInTheDocument();
+  expect(screen.getByText('schimmern')).toBeInTheDocument();
 });

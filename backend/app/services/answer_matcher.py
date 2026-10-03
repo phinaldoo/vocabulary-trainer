@@ -130,6 +130,7 @@ class MatchResult:
     article_insensitive: bool = False
     order_insensitive: bool = False
     parentheses_optional: bool = False
+    missing_meanings: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -424,11 +425,11 @@ def _value_candidates(value: str, *, language: str) -> list[Candidate]:
 
 
 def _combined_german_candidates(groups: list[list[Candidate]]) -> list[Candidate]:
-    """Accept any non-empty subset of complete German meaning groups."""
+    """Require every German meaning group, allowing variants within each group."""
 
     states: dict[tuple[str, ...], str] = {(): ""}
     for group in groups:
-        next_states = dict(states)
+        next_states: dict[tuple[str, ...], str] = {}
         for base_signature, base_display in states.items():
             for candidate in group:
                 signature = tuple(sorted((*base_signature, *candidate.signature)))
@@ -438,6 +439,38 @@ def _combined_german_candidates(groups: list[list[Candidate]]) -> list[Candidate
                     raise ValueError("Vocabulary entry expands to too many answer variants")
         states = next_states
     return [Candidate(display, signature) for signature, display in states.items() if signature]
+
+
+def _missing_german_meanings(
+    answer_signatures: set[tuple[str, ...]],
+    groups: list[list[Candidate]],
+    labels: list[str],
+) -> tuple[str, ...]:
+    """Explain exact subsets without treating typos or unknown words as partial answers."""
+
+    best: tuple[str, ...] = ()
+    for signature in answer_signatures:
+        states: dict[tuple[str, ...], tuple[str, ...]] = {signature: ()}
+        for group, label in zip(groups, labels, strict=True):
+            next_states: dict[tuple[str, ...], tuple[str, ...]] = {}
+            for remaining, missing in states.items():
+                options = [(remaining, (*missing, label))]
+                available = Counter(remaining)
+                for candidate in group:
+                    required = Counter(candidate.signature)
+                    if required <= available:
+                        rest = tuple(sorted((available - required).elements()))
+                        options.append((rest, missing))
+                for rest, omitted in options:
+                    if rest not in next_states or len(omitted) < len(next_states[rest]):
+                        next_states[rest] = omitted
+            if len(next_states) > MAX_VARIANTS:
+                return ()
+            states = next_states
+        missing = states.get((), ())
+        if missing and len(missing) < len(groups) and (not best or len(missing) < len(best)):
+            best = missing
+    return best
 
 
 def _latin_principal_match(
@@ -508,7 +541,18 @@ def match_text(answer: str, expected: str, *, language: str) -> MatchResult:
             ),
             parentheses_optional="(" in expected or "[" in expected,
         )
-    return MatchResult(correct=False, normalized_input=normalized_input)
+    missing = ()
+    if language == "de" and not german_required:
+        missing = _missing_german_meanings(
+            answer_signatures,
+            groups,
+            [
+                label
+                for label in _meaning_groups(expected, language=language)
+                if _value_candidates(label, language=language)
+            ],
+        )
+    return MatchResult(correct=False, normalized_input=normalized_input, missing_meanings=missing)
 
 
 def validate_expected(expected: str, *, language: str) -> None:
@@ -546,6 +590,7 @@ def match_card_answer(
     if matcher_profile not in SUPPORTED_MATCHERS:
         raise ValueError(f"Unsupported matcher profile: {matcher_profile}")
     candidates = [expected, *accepted_answers]
+    partial_result = None
     for candidate in candidates:
         if matcher_profile == "german-v1":
             result = match_text(answer, candidate, language="de")
@@ -555,7 +600,9 @@ def match_card_answer(
             result = _generic_match(answer, candidate)
         if result.correct:
             return result
-    return MatchResult(correct=False, normalized_input=normalize_text(answer))
+        if result.missing_meanings and partial_result is None:
+            partial_result = result
+    return partial_result or MatchResult(correct=False, normalized_input=normalize_text(answer))
 
 
 def validate_answer_spec(

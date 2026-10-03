@@ -23,6 +23,7 @@ const account: User = {
   daily_goal: 12,
   direction: 'forward',
   input_mode: 'typing',
+  selection_mode: 'scheduled',
   selected_deck_id: null,
   selected_section_id: null,
   created_at: '2026-08-31T10:00:00Z',
