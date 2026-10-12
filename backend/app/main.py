@@ -14,7 +14,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import func, select, text
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from app.api import account, admin, auth, catalog, progress, study
+from app.api import account, admin, auth, catalog, progress, special_verbs, study
 from app.config import Settings, get_settings
 from app.database import create_database
 from app.errors import ApiError, api_error_handler
@@ -67,7 +67,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             content_length = 65_537
         request_limit = (
             config.max_import_bytes
-            if request.url.path == f"{config.api_prefix}/admin/import"
+            if request.url.path in {
+                f"{config.api_prefix}/admin/import",
+                f"{config.api_prefix}/admin/special-verbs/preview",
+                f"{config.api_prefix}/admin/special-verbs/import",
+            }
             else config.max_request_bytes
         )
         if content_length > request_limit:
@@ -177,6 +181,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         study.router,
         progress.router,
         admin.router,
+        special_verbs.router,
     ):
         app.include_router(router, prefix=config.api_prefix)
 

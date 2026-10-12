@@ -77,6 +77,16 @@ describe('Lernmodus', () => {
     });
   });
 
+  it.each(['forward', 'reverse', 'mixed'])('uses the special-verb practice link direction: %s', async (direction) => {
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={[`/lernen?deck=deck-1&section=section-49&direction=${direction}`]}><LearnPage /></MemoryRouter></I18nProvider>);
+    expect(await screen.findByRole('combobox', { name: 'Question direction' })).toHaveValue(direction);
+    await user.click(screen.getByRole('button', { name: 'Start learning' }));
+    await waitFor(() => expect(mockApi).toHaveBeenCalledWith('/study-sessions', expect.objectContaining({
+      body: expect.stringContaining(`"direction":"${direction}"`),
+    })));
+  });
+
   it.each([
     { answer: 'gehen', solution: 'gehen, laufen (zu Fuß)', bold: ['gehen'] },
     { answer: '  GEHEN  ', solution: 'gehen, gehen lassen', bold: ['gehen', 'gehen'] },

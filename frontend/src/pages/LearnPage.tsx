@@ -96,7 +96,11 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
     if (requestedDeck) return [];
     return user?.selected_section_ids ?? (user?.selected_section_id ? [user.selected_section_id] : []);
   });
-  const [direction, setDirection] = useState<Direction>(user?.direction ?? 'forward');
+  const requestedDirection = params.get('direction');
+  const [direction, setDirection] = useState<Direction>(
+    requestedDirection === 'forward' || requestedDirection === 'reverse' || requestedDirection === 'mixed'
+      ? requestedDirection : user?.direction ?? 'forward',
+  );
   const [mode, setMode] = useState<InputMode>(user?.input_mode ?? 'typing');
   const requestedSelection = params.get('selection');
   const [selectionMode, setSelectionMode] = useState<SelectionMode>(
@@ -159,6 +163,7 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
         {sections.loading ? <PageLoading label={t('common.sectionsLoading')} /> : sections.error ? <PageError message={sections.error} retry={() => void sections.reload()} /> : sections.data ? <SectionPicker sections={sections.data} selected={sectionIds} onSelect={selectSection} /> : <PageError message={sections.error} retry={() => void sections.reload()} />}
       </section>
 
+      {deck.front_matcher === 'latin-principal-parts-v1' && <p className="panel verb-study-hint">{t('verbs.practiceHelp')}</p>}
       <section className="setup-two-column">
         <article className="setup-section panel">
           <div className="setup-heading"><span>2</span><div><h2>{t('learn.studyMode')}</h2><p>{t('learn.chooseEachTime')}</p></div></div>
@@ -376,6 +381,7 @@ export function LearnPage() {
     setSession(null);
     const search = new URLSearchParams();
     if (session?.deck_id) search.set('deck', session.deck_id);
+    if (session?.direction) search.set('direction', session.direction);
     for (const id of session?.section_ids ?? (session?.section_id ? [session.section_id] : [])) search.append('section', id);
     if (selection ?? session?.selection_mode) search.set('selection', selection ?? session!.selection_mode);
     setParams(search, { replace: true });

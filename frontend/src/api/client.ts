@@ -4,6 +4,7 @@ import type { MessageKey } from '../i18n/messages';
 type ErrorEnvelope = { error?: { code?: string; message?: string } };
 
 const errorMessages: Record<string, MessageKey> = {
+  invalid_verb_csv: 'verbs.fixErrors',
   admin_required: 'api.adminRequired',
   origin_not_allowed: 'api.requestRejected',
   cross_site_request: 'api.requestRejected',

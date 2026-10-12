@@ -9,6 +9,7 @@ import { LandingPage } from './pages/LandingPage';
 import { LearnPage } from './pages/LearnPage';
 import { ProgressPage } from './pages/ProgressPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { SpecialVerbsPage } from './pages/SpecialVerbsPage';
 import { VocabularyPage } from './pages/VocabularyPage';
 import { useI18n } from './i18n';
 
@@ -42,6 +43,7 @@ export function App() {
       <Route path="/" element={<Protected><DashboardPage /></Protected>} />
       <Route path="/lernen" element={<Protected><LearnPage /></Protected>} />
       <Route path="/vokabeln" element={<Protected><VocabularyPage /></Protected>} />
+      <Route path="/verben" element={<Protected><SpecialVerbsPage /></Protected>} />
       <Route path="/fortschritt" element={<Protected><ProgressPage /></Protected>} />
       <Route path="/einstellungen" element={<Protected><SettingsPage /></Protected>} />
       <Route path="/admin" element={<Protected><AdminPage /></Protected>} />

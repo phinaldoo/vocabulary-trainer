@@ -69,6 +69,11 @@ Each side declares one matcher:
 - `latin-v1`: Latin principal-part and construction matching used by migrated
   legacy decks.
 
+- `latin-principal-parts-v1`: requires every listed Latin form in its original
+  order, using the same normalization as `generic-v1`. Punctuation, parentheses,
+  and missing-form dashes may be omitted, but parenthesized forms are required.
+  Decks with this front matcher appear on the Special verbs page.
+
 Language values are BCP 47-style tags such as `en`, `de`, `la`, or `pt-BR`.
 Metadata is an arbitrary JSON object shown as supplemental card information.
 

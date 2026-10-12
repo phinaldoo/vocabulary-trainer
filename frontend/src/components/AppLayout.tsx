@@ -1,6 +1,7 @@
 import {
   BarChart3,
   BookOpen,
+  Languages,
   ChevronRight,
   Database,
   House,
@@ -18,6 +19,7 @@ const navigation = [
   { label: 'nav.home', href: '/', icon: House },
   { label: 'nav.learn', href: '/lernen', icon: Sparkles },
   { label: 'nav.cards', href: '/vokabeln', icon: BookOpen },
+  { label: 'verbs.nav', href: '/verben', icon: Languages },
   { label: 'nav.progress', href: '/fortschritt', icon: BarChart3 },
 ] as const;
 
