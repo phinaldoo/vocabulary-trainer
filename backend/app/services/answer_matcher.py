@@ -565,7 +565,7 @@ def validate_expected(expected: str, *, language: str) -> None:
         _combined_german_candidates(groups)
 
 
-SUPPORTED_MATCHERS = {"generic-v1", "german-v1", "latin-v1"}
+SUPPORTED_MATCHERS = {"generic-v1", "german-v1", "latin-v1", "latin-principal-parts-v1"}
 
 
 def _generic_match(answer: str, expected: str) -> MatchResult:
@@ -597,6 +597,9 @@ def match_card_answer(
         elif matcher_profile == "latin-v1":
             result = match_text(answer, candidate, language="la")
         else:
+            # Principal-parts practice requires the entire ordered sequence.
+            # Normalization ignores punctuation, parentheses and missing-form dashes,
+            # but retains every actual form (unlike the optional parts in latin-v1).
             result = _generic_match(answer, candidate)
         if result.correct:
             return result

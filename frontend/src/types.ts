@@ -4,7 +4,7 @@ export type SelectionMode = 'scheduled' | 'random' | 'adaptive' | 'mistakes';
 export type InputMode = 'typing' | 'reveal';
 export type UiLanguage = 'en' | 'zh-Hans' | 'hi' | 'es' | 'de';
 export type DeckStatus = 'draft' | 'published' | 'archived';
-export type MatcherProfile = 'generic-v1' | 'german-v1' | 'latin-v1';
+export type MatcherProfile = 'generic-v1' | 'german-v1' | 'latin-v1' | 'latin-principal-parts-v1';
 
 export type User = {
   id: string;

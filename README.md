@@ -270,3 +270,33 @@ To verify reset/review transaction ordering on PostgreSQL, migrate a dedicated t
 database, set `TEST_POSTGRES_URL` to its SQLAlchemy async URL, and run
 `pytest tests/test_progress_reset_postgres.py`. This optional test creates and removes
 its own test account/deck and is skipped when that variable is absent.
+
+### Special verbs
+
+Open **Special verbs** (`/verben`) to browse and practice Latin principal parts.
+Administrators can upload a CSV on this page, review validation errors and a
+preview, then **Import and publish** the collection for all learners. Each learner
+has their own progress, including separate forward and reverse reviews.
+
+Use five columns in this order: **infinitive; first-person present; first-person
+perfect; supine/fourth form; German meaning**. The importer accepts UTF-8 (including
+BOM) and Windows-1252 files, semicolon/tab separators or properly quoted comma CSV,
+an optional column header, blank rows, and single-cell conjugation/perfect headings
+such as `Verben der a-Konjugaton` and `u-Perfekt`. Repeated group headings are merged.
+Use `-` for an unavailable perfect or fourth form. Uploads are limited to 1 MB and
+2,000 verbs. Invalid rows prevent the entire import; errors include line numbers.
+Identical duplicate rows are skipped, while conflicting duplicate infinitives must
+be resolved before importing.
+
+Choose **Latin → German**, **German → Latin forms**, or **Mixed**, then use the
+existing typing or reveal practice, section selection, scheduled/random/adaptive
+practice, and mistake repetition. Latin answers require all listed forms in order;
+commas, parentheses and missing-form dashes may be omitted. Parenthesized forms
+still have to be supplied. German answers use the existing checker, which expects
+all listed meanings. Source spellings are preserved without automatic corrections.
+
+Repeated uploads of the same normalized content reuse the existing collection and
+preserve its title, edits, publication status, and all progress. Changed CSV content
+creates a separate collection; edit or archive existing collections through Admin.
+These collections use the `latin-principal-parts-v1` front matcher, which identifies
+them on the Special verbs page. No database migration is required.

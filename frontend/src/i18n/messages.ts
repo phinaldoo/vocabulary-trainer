@@ -1,7 +1,9 @@
+import { verbMessages } from './verbs';
 import type { UiLanguage } from '../types';
 
 // Key, English, Simplified Chinese, Hindi, Spanish, German.
 export const messageRows = [
+  ...verbMessages,
   ["reset.title", "Reset learning progress", "重置学习进度", "सीखने की प्रगति रीसेट करें", "Restablecer progreso", "Lernfortschritt zurücksetzen"],
   ["reset.intro", "Start over in one deck or all decks.", "重新开始一个或所有卡组。", "एक या सभी डेक में फिर से शुरू करें।", "Empieza de nuevo en uno o todos los mazos.", "Starte in einem oder allen Decks neu."],
   ["reset.open", "Reset progress…", "重置进度…", "प्रगति रीसेट करें…", "Restablecer progreso…", "Fortschritt zurücksetzen…"],
