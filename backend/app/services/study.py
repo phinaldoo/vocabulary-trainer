@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.deck_kinds import deck_kind
 from app.errors import ApiError
 from app.models import (
     Card,
@@ -236,12 +237,15 @@ async def create_study_session(
             )
         )
 
-    user.selected_deck_id = deck.id
-    user.selected_section_id = payload.section_id
-    user.selected_section_ids = [str(value) for value in section_ids]
-    user.direction = payload.direction
-    user.input_mode = payload.input_mode
-    user.selection_mode = payload.selection_mode
+    # Verb practice is independent of the ordinary vocabulary defaults, including
+    # direction and selection mode. A stale/legacy client cannot overwrite them.
+    if deck_kind(deck.front_matcher) == "vocabulary":
+        user.selected_deck_id = deck.id
+        user.selected_section_id = payload.section_id
+        user.selected_section_ids = [str(value) for value in section_ids]
+        user.direction = payload.direction
+        user.input_mode = payload.input_mode
+        user.selection_mode = payload.selection_mode
     await db.commit()
     return await get_study_session(db, user.id, study_session.id)
 
@@ -314,6 +318,7 @@ async def get_study_session(
         if item.reviewed_at is None
     ]
     return StudySessionPublic(
+        kind=deck_kind(deck.front_matcher),
         selection_mode=study_session.selection_mode,
         id=study_session.id,
         deck_id=deck.id,

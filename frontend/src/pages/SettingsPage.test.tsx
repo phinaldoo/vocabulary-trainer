@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -45,7 +45,7 @@ describe('SettingsPage language preference', () => {
     mockApi.mockReset();
     mockUpdateUser.mockReset();
     mockApi.mockImplementation((path: string) => {
-      if (path === '/decks') return Promise.resolve([]);
+      if (path === '/decks?kind=all') return Promise.resolve([]);
       if (path === '/account/settings') return Promise.resolve({ ...account, language: 'zh-Hans' });
       if (path === '/account/profile') return Promise.resolve({
         ...account,
@@ -75,6 +75,28 @@ describe('SettingsPage language preference', () => {
     const settingsCall = mockApi.mock.calls.find(([path]) => path === '/account/settings');
     expect(JSON.parse(String(settingsCall?.[1]?.body))).toMatchObject({ language: 'zh-Hans' });
     expect(mockUpdateUser).toHaveBeenCalledWith(expect.objectContaining({ language: 'zh-Hans' }));
+  });
+
+  it('excludes verbs from ordinary defaults but keeps them available for progress reset', async () => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string) => {
+      if (path === '/decks?kind=all') return Promise.resolve([
+        { id: 'verbs', title: 'Special verbs', front_matcher: 'latin-principal-parts-v1' },
+        { id: 'normal', title: 'Ordinary vocabulary', front_label: 'Latin', back_label: 'German', front_matcher: 'latin-v1' },
+      ]);
+      if (path.startsWith('/sections?')) return Promise.resolve([]);
+      return original(path);
+    });
+    const event = userEvent.setup();
+    render(<I18nProvider><MemoryRouter><SettingsPage /></MemoryRouter></I18nProvider>);
+    const ordinary = await screen.findByRole('option', { name: 'Ordinary vocabulary' });
+    expect(ordinary.closest('select')).toHaveValue('normal');
+    expect(screen.queryByRole('option', { name: 'Special verbs' })).not.toBeInTheDocument();
+    expect(mockApi.mock.calls.some(([path]) => path === '/account/settings')).toBe(false);
+    await event.click(screen.getByRole('button', { name: 'Reset progress…' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByRole('option', { name: 'Special verbs' })).toBeInTheDocument();
+    expect(within(dialog).getByRole('option', { name: 'Ordinary vocabulary' })).toBeInTheDocument();
   });
 
   it('automatically saves every expanded daily goal without saving on mount', async () => {

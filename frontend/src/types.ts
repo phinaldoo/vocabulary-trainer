@@ -112,6 +112,7 @@ export type StudyCard = {
 };
 
 export type StudySession = {
+  kind?: 'vocabulary' | 'special_verbs';
   selection_mode: SelectionMode;
   id: string;
   deck_id: string;

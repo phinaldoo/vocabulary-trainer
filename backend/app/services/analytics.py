@@ -85,7 +85,9 @@ async def dashboard_data(
     user: User,
     deck_id: uuid.UUID | None = None,
 ) -> DashboardData:
-    deck = await resolve_published_deck(db, deck_id or user.selected_deck_id)
+    deck = await resolve_published_deck(
+        db, deck_id or user.selected_deck_id, vocabulary_only=deck_id is None,
+    )
     if not deck:
         return DashboardData(
             deck=None,
@@ -187,7 +189,9 @@ async def progress_data(
     user: User,
     deck_id: uuid.UUID | None = None,
 ) -> ProgressData:
-    deck = await resolve_published_deck(db, deck_id or user.selected_deck_id)
+    deck = await resolve_published_deck(
+        db, deck_id or user.selected_deck_id, vocabulary_only=deck_id is None,
+    )
     if not deck:
         return ProgressData(
             deck=None,

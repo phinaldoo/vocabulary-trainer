@@ -725,3 +725,8 @@ kbd { border: 1px solid rgb(0 0 0 / 12%); border-radius: 5px; background: rgb(25
 }
 .verb-table { min-width: 1000px; }
 .verb-table td:nth-child(-n+4) { white-space: nowrap; overflow-wrap: normal; }
+
+.verb-mode-nav { width: min(100%, 1100px); margin: auto; padding: 24px 40px 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.verb-mode-nav a { padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; }
+.verb-mode-nav a.active { background: var(--ink); color: white; }
+@media (max-width: 600px) { .verb-mode-nav { padding: 20px 18px 0; } }

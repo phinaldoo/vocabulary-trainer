@@ -1,14 +1,14 @@
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { StrictMode } from 'react';
 import userEvent from '@testing-library/user-event';
-import { Link, MemoryRouter } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { LearnPage } from './LearnPage';
 import { I18nProvider } from '../i18n';
 
 const mockApi = vi.hoisted(() => vi.fn());
 const mockUpdateUser = vi.hoisted(() => vi.fn());
-const mockPreference = vi.hoisted(() => ({ selection: 'scheduled' }));
+const mockPreference = vi.hoisted(() => ({ selection: 'scheduled', sections: [] as string[] }));
 
 vi.mock('../api/client', async () => {
   const actual = await vi.importActual<typeof import('../api/client')>('../api/client');
@@ -29,6 +29,7 @@ vi.mock('../auth/AuthContext', () => ({
       selection_mode: mockPreference.selection,
       selected_deck_id: 'deck-1',
       selected_section_id: null,
+      selected_section_ids: mockPreference.sections,
       created_at: '2026-08-30T10:00:00Z',
     },
     refresh: vi.fn().mockResolvedValue(undefined),
@@ -67,14 +68,64 @@ describe('Lernmodus', () => {
     mockApi.mockReset();
     mockUpdateUser.mockReset();
     mockPreference.selection = 'scheduled';
+    mockPreference.sections = [];
     mockApi.mockImplementation((path: string, options?: RequestInit) => {
-      if (path === '/decks') return Promise.resolve([deck]);
+      if (path === '/decks?kind=all') return Promise.resolve([deck]);
       if (path === '/sections?deck_id=deck-1') return Promise.resolve([section]);
       if (path === '/study-sessions' && options?.method === 'POST') return Promise.resolve(session);
       if (path === '/study-sessions/session-1') return Promise.resolve(session);
       if (path.endsWith('/reveal')) return Promise.resolve({ solution: 'qarilo-82' });
       throw new Error(`Unerwarteter API-Aufruf: ${path}`);
     });
+  });
+
+  it('keeps special verbs in their own mode without changing ordinary chapters or defaults', async () => {
+    mockPreference.sections = ['section-49'];
+    mockPreference.selection = 'adaptive';
+    const verbDeck = { ...deck, id: 'verbs', title: 'Special verbs', front_matcher: 'latin-principal-parts-v1' };
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => {
+      if (path === '/decks?kind=all') return Promise.resolve([verbDeck, deck]);
+      if (path === '/sections?deck_id=verbs') return Promise.resolve([{ ...section, id: 'verb-section', deck_id: 'verbs', title: 'u-Perfekt' }]);
+      if (path === '/study-sessions' || path === '/study-sessions/session-1') return Promise.resolve({ ...session, kind: 'special_verbs', deck_id: 'verbs' });
+      return original(path, options);
+    });
+    const user = userEvent.setup();
+    render(<I18nProvider><MemoryRouter initialEntries={['/verben/lernen?deck=verbs&direction=reverse']}>
+      <Link to="/lernen">Normal practice</Link>
+      <Routes>
+        <Route path="/lernen" element={<LearnPage key="ordinary" />} />
+        <Route path="/verben/lernen" element={<LearnPage key="verbs" specialVerbs />} />
+      </Routes>
+    </MemoryRouter></I18nProvider>);
+    expect(await screen.findByRole('combobox', { name: 'Deck' })).toHaveValue('verbs');
+    expect(screen.queryByRole('option', { name: /Synthetic test deck/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Card selection' })).toHaveValue('scheduled');
+    await user.click(await screen.findByRole('button', { name: /u-Perfekt/ }));
+    await user.click(screen.getByRole('button', { name: 'Start learning' }));
+    await screen.findByRole('heading', { name: 'nuvexa-47' });
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+    await user.click(screen.getByRole('link', { name: 'Normal practice' }));
+    expect(await screen.findByRole('combobox', { name: 'Deck' })).toHaveValue('deck-1');
+    expect(screen.queryByRole('option', { name: /Special verbs/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Generated samples/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('combobox', { name: 'Card selection' })).toHaveValue('adaptive');
+    expect(screen.getByRole('combobox', { name: 'Question direction' })).toHaveValue('forward');
+  });
+
+  it.each(['deck=verbs', 'session=session-1'])('redirects old verb links to the dedicated mode: %s', async (query) => {
+    const original = mockApi.getMockImplementation()!;
+    mockApi.mockImplementation((path: string, options?: RequestInit) => {
+      if (path === '/decks?kind=all') return Promise.resolve([deck, { ...deck, id: 'verbs', front_matcher: 'latin-principal-parts-v1' }]);
+      if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, kind: 'special_verbs' });
+      return original(path, options);
+    });
+    function Destination() { return <output>{useLocation().pathname + useLocation().search}</output>; }
+    render(<I18nProvider><MemoryRouter initialEntries={[`/lernen?${query}`]}><Routes>
+      <Route path="/lernen" element={<LearnPage />} />
+      <Route path="/verben/lernen" element={<Destination />} />
+    </Routes></MemoryRouter></I18nProvider>);
+    expect(await screen.findByText(`/verben/lernen?${query}`)).toBeInTheDocument();
   });
 
   it.each(['forward', 'reverse', 'mixed'])('uses the special-verb practice link direction: %s', async (direction) => {
@@ -214,7 +265,7 @@ describe('Lernmodus', () => {
   it('clears selected sections when switching decks', async () => {
     const original = mockApi.getMockImplementation()!;
     mockApi.mockImplementation((path: string, options?: RequestInit) => {
-      if (path === '/decks') return Promise.resolve([deck, { ...deck, id: 'deck-2', title: 'Second deck' }]);
+      if (path === '/decks?kind=all') return Promise.resolve([deck, { ...deck, id: 'deck-2', title: 'Second deck' }]);
       if (path === '/sections?deck_id=deck-2') return Promise.resolve([{ ...section, deck_id: 'deck-2', id: 'section-60', title: 'Other section' }]);
       return original(path, options);
     });
@@ -232,7 +283,7 @@ describe('Lernmodus', () => {
 
   it('keeps adaptive selection when starting another session', async () => {
     mockApi.mockImplementation((path: string) => {
-      if (path === '/decks') return Promise.resolve([deck]);
+      if (path === '/decks?kind=all') return Promise.resolve([deck]);
       if (path === '/sections?deck_id=deck-1') return Promise.resolve([section]);
       if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, selection_mode: 'adaptive', complete: true, cards: [] });
       throw new Error(`Unexpected API call: ${path}`);
@@ -321,7 +372,7 @@ describe('Lernmodus', () => {
     let resolveReview!: (value: unknown) => void;
     let attempts = 0;
     mockApi.mockImplementation((path: string) => {
-      if (path === '/decks') return Promise.resolve([deck]);
+      if (path === '/decks?kind=all') return Promise.resolve([deck]);
       if (path === '/study-sessions/session-1') return Promise.resolve({
         ...session, input_mode: 'typing', total: 3,
         cards: [1, 2, 3].map((i) => ({ ...session.cards[0], item_id: `item-${i}`, prompt: `word-${i}` })),
@@ -360,7 +411,7 @@ describe('Lernmodus', () => {
       cards: [session.cards[0], { ...session.cards[0], item_id: 'item-2', prompt: 'next-word' }],
     };
     mockApi.mockImplementation((path: string) => {
-      if (path === '/decks') return Promise.resolve([deck]);
+      if (path === '/decks?kind=all') return Promise.resolve([deck]);
       if (path === '/study-sessions/session-1') return Promise.resolve(typingSession);
       if (path.endsWith('/check')) return Promise.resolve({ correct, solution: 'qarilo-82', match_kind: null });
       if (path.endsWith('/reviews')) return Promise.resolve({ reviewed: 1, correct_reviewed: Number(correct), complete: false });
@@ -386,7 +437,7 @@ describe('Lernmodus', () => {
 
   it.each(['Enter', 'click'] as const)('finishes the last card using %s without choosing difficulty', async (action) => {
     mockApi.mockImplementation((path: string) => {
-      if (path === '/decks') return Promise.resolve([deck]);
+      if (path === '/decks?kind=all') return Promise.resolve([deck]);
       if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, input_mode: 'typing' });
       if (path.endsWith('/check')) return Promise.resolve({ correct: true, solution: 'qarilo-82', match_kind: 'exact' });
       if (path.endsWith('/reviews')) return Promise.resolve({ reviewed: 1, correct_reviewed: 1, complete: true });
@@ -428,7 +479,7 @@ describe('Lernmodus', () => {
 
 it('shows missing meanings after checking an incomplete typed answer', async () => {
   mockApi.mockImplementation((path: string) => {
-    if (path === '/decks') return Promise.resolve([deck]);
+    if (path === '/decks?kind=all') return Promise.resolve([deck]);
     if (path === '/study-sessions/session-1') return Promise.resolve({ ...session, input_mode: 'typing' });
     if (path.endsWith('/check')) return Promise.resolve({
       correct: false, solution: 'funkeln (bei Nacht), schimmern',

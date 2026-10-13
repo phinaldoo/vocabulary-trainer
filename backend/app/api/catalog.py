@@ -18,10 +18,13 @@ router = APIRouter(tags=["catalog"])
 
 
 @router.get("/decks", response_model=list[DeckPublic])
-async def deck_list(auth: CurrentAuth, db: Database, response: Response) -> list[DeckPublic]:
+async def deck_list(
+    auth: CurrentAuth, db: Database, response: Response,
+    kind: Literal["vocabulary", "special_verbs", "all"] = "vocabulary",
+) -> list[DeckPublic]:
     del auth
     response.headers["Cache-Control"] = "private, no-store"
-    return [await deck_public(db, deck) for deck in await published_decks(db)]
+    return [await deck_public(db, deck) for deck in await published_decks(db, kind)]
 
 
 @router.get("/sections", response_model=list[SectionPublic])
@@ -31,7 +34,9 @@ async def section_list(
     response: Response,
     deck_id: uuid.UUID | None = None,
 ) -> list[SectionPublic]:
-    deck = await resolve_published_deck(db, deck_id or auth.user.selected_deck_id)
+    deck = await resolve_published_deck(
+        db, deck_id or auth.user.selected_deck_id, vocabulary_only=deck_id is None,
+    )
     response.headers["Cache-Control"] = "private, no-store"
     if not deck:
         return []
@@ -58,7 +63,9 @@ async def card_list(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=36, ge=1, le=100),
 ) -> PaginatedCards:
-    deck = await resolve_published_deck(db, deck_id or auth.user.selected_deck_id)
+    deck = await resolve_published_deck(
+        db, deck_id or auth.user.selected_deck_id, vocabulary_only=deck_id is None,
+    )
     if not deck:
         return PaginatedCards(items=[], page=page, page_size=page_size, total=0, pages=1)
     if section_id:

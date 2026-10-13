@@ -1,5 +1,6 @@
 // Key, English, Simplified Chinese, Hindi, Spanish, German.
 export const verbMessages = [
+  ['verbs.independent', 'A separate practice mode. Your vocabulary deck and chapter selection stay unchanged.', '独立练习模式。词汇卡组和章节选择保持不变。', 'अलग अभ्यास मोड। आपका शब्दावली डेक और अध्याय चयन नहीं बदलता।', 'Un modo de práctica independiente. Tu mazo de vocabulario y selección de capítulos se conservan.', 'Ein eigener Lernmodus. Dein Vokabeldeck und deine Kapitelauswahl bleiben unverändert.'],
   ['verbs.nav', 'Special verbs', '特殊动词', 'विशेष क्रियाएँ', 'Verbos especiales', 'Besondere Verben'],
   ['verbs.title', 'Special verbs', '特殊动词', 'विशेष क्रियाएँ', 'Verbos especiales', 'Besondere Verben'],
   ['verbs.kicker', 'Latin principal parts', '拉丁语主要形式', 'लैटिन के मुख्य रूप', 'Formas principales del latín', 'Lateinische Stammformen'],
