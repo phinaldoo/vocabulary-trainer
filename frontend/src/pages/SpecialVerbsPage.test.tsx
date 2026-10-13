@@ -24,7 +24,7 @@ describe('special verbs', () => {
     auth.user.role = 'admin';
     mockApi.mockReset();
     mockApi.mockImplementation((path: string) => {
-      if (path === '/decks') return Promise.resolve([deck, { id: 'normal', title: 'Ordinary vocabulary', front_matcher: 'latin-v1' }]);
+      if (path === '/decks?kind=special_verbs') return Promise.resolve([deck, { id: 'normal', title: 'Ordinary vocabulary', front_matcher: 'latin-v1' }]);
       if (path.startsWith('/sections?')) return Promise.resolve([{ id: 'group1', title: 'u-Perfekt' }]);
       if (path.startsWith('/cards?')) return Promise.resolve({ items: [{ id: 'verb1', front_text: 'vetare, veto, vetui, vetitum', back_text: 'verbieten', section_title: 'u-Perfekt' }], pages: 1 });
       if (path.endsWith('/preview')) return Promise.resolve({ rows: [row], errors: [], duplicate_count: 0, section_count: 1 });
@@ -44,7 +44,7 @@ describe('special verbs', () => {
       method: 'POST', body: JSON.stringify({ title: 'Verbs', csv_text: csv }),
     });
     expect(screen.queryByRole('button', { name: 'Import and publish' })).not.toBeInTheDocument();
-    await waitFor(() => expect(mockApi.mock.calls.filter(([path]) => path === '/decks').length).toBe(2));
+    await waitFor(() => expect(mockApi.mock.calls.filter(([path]) => path === '/decks?kind=special_verbs').length).toBe(2));
   });
 
   it('shows row errors and blocks invalid imports', async () => {
@@ -61,9 +61,9 @@ describe('special verbs', () => {
     expect(await screen.findByText('vetitum')).toBeInTheDocument();
     expect(screen.queryByText('Ordinary vocabulary')).not.toBeInTheDocument();
     await user.selectOptions(screen.getByRole('combobox', { name: 'Conjugation / perfect group' }), 'group1');
-    expect(screen.getByRole('link', { name: 'Latin → German' })).toHaveAttribute('href', '/lernen?deck=verbs&section=group1&direction=forward');
-    expect(screen.getByRole('link', { name: 'German → Latin forms' })).toHaveAttribute('href', '/lernen?deck=verbs&section=group1&direction=reverse');
-    expect(screen.getByRole('link', { name: /Mixed/ })).toHaveAttribute('href', '/lernen?deck=verbs&section=group1&direction=mixed');
+    expect(screen.getByRole('link', { name: 'Latin → German' })).toHaveAttribute('href', '/verben/lernen?deck=verbs&section=group1&direction=forward');
+    expect(screen.getByRole('link', { name: 'German → Latin forms' })).toHaveAttribute('href', '/verben/lernen?deck=verbs&section=group1&direction=reverse');
+    expect(screen.getByRole('link', { name: /Mixed/ })).toHaveAttribute('href', '/verben/lernen?deck=verbs&section=group1&direction=mixed');
     await user.type(screen.getByRole('textbox', { name: 'Search verbs or meanings' }), 'vetare');
     await waitFor(() => expect(mockApi).toHaveBeenCalledWith(expect.stringContaining('q=vetare')));
   });

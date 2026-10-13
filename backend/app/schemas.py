@@ -14,6 +14,8 @@ from pydantic import (
     model_validator,
 )
 
+from app.deck_kinds import DeckKind
+
 DisplayName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=80)]
 Password = Annotated[str, StringConstraints(min_length=10, max_length=128)]
 Direction = Literal["forward", "reverse", "mixed"]
@@ -356,6 +358,7 @@ class StudyCard(BaseModel):
 
 
 class StudySessionPublic(BaseModel):
+    kind: DeckKind = "vocabulary"
     selection_mode: SelectionMode
     id: uuid.UUID
     deck_id: uuid.UUID

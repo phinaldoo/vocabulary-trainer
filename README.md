@@ -278,6 +278,19 @@ Administrators can upload a CSV on this page, review validation errors and a
 preview, then **Import and publish** the collection for all learners. Each learner
 has their own progress, including separate forward and reverse reviews.
 
+Special verbs have their own practice, vocabulary list, and progress routes under
+`/verben`. Ordinary deck selectors and dashboards exclude these collections.
+Starting a verb session preserves the learner's ordinary deck, chapter selection,
+question direction, input mode, and card-selection preference. Existing verb
+practice links redirect to the dedicated mode.
+
+Run `alembic upgrade head` when upgrading. The data migration repairs preferences
+previously overwritten by verb sessions using the latest ordinary session on a
+published deck. Without that history, it selects the first published ordinary deck
+and all chapters. Vocabulary, verb collections, and learning progress are preserved.
+The catalogue API defaults to ordinary decks; use `GET /api/v1/decks?kind=special_verbs`
+for verb collections or `?kind=all` for administrative selectors.
+
 Use five columns in this order: **infinitive; first-person present; first-person
 perfect; supine/fourth form; German meaning**. The importer accepts UTF-8 (including
 BOM) and Windows-1252 files, semicolon/tab separators or properly quoted comma CSV,
@@ -299,4 +312,4 @@ Repeated uploads of the same normalized content reuse the existing collection an
 preserve its title, edits, publication status, and all progress. Changed CSV content
 creates a separate collection; edit or archive existing collections through Admin.
 These collections use the `latin-principal-parts-v1` front matcher, which identifies
-them on the Special verbs page. No database migration is required.
+them on the Special verbs page.

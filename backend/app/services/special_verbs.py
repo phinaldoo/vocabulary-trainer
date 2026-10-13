@@ -9,10 +9,10 @@ import json
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from app.deck_kinds import PRINCIPAL_PARTS_MATCHER
 from app.schemas import DeckManifest, ShortText
 from app.services.answer_matcher import validate_answer_spec
 
-PRINCIPAL_PARTS_MATCHER = "latin-principal-parts-v1"
 MAX_CSV_BYTES = 1_000_000
 
 

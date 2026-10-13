@@ -13,13 +13,14 @@ import {
   X,
 } from 'lucide-react';
 import { FormEvent, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { api, ApiError, createIdempotencyKey } from '../api/client';
 import { useResource } from '../api/useResource';
 import { useAuth } from '../auth/AuthContext';
 import { PageError, PageLoading } from '../components/PageState';
 import { HighlightedSolution } from '../components/HighlightedSolution';
 import type { Deck, Direction, InputMode, ReviewResult, Section, SelectionMode, StudySession } from '../types';
+import { isSpecialVerbDeck, learnPath } from '../lib/learningMode';
 import { useI18n } from '../i18n';
 import type { MessageKey } from '../i18n/messages';
 
@@ -80,7 +81,7 @@ type StartConfig = {
   limit: number;
 };
 
-function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Promise<void> }) {
+function Setup({ decks, start, specialVerbs }: { decks: Deck[]; start(config: StartConfig): Promise<void>; specialVerbs: boolean }) {
   const { user } = useAuth();
   const { number, t } = useI18n();
   const [params, setParams] = useSearchParams();
@@ -93,19 +94,19 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
   const [deckId, setDeckId] = useState(initialDeckId);
   const [sectionIds, setSectionIds] = useState<string[]>(() => {
     if (params.has('section')) return [...new Set(params.getAll('section').filter(Boolean))];
-    if (requestedDeck) return [];
+    if (requestedDeck || specialVerbs) return [];
     return user?.selected_section_ids ?? (user?.selected_section_id ? [user.selected_section_id] : []);
   });
   const requestedDirection = params.get('direction');
   const [direction, setDirection] = useState<Direction>(
     requestedDirection === 'forward' || requestedDirection === 'reverse' || requestedDirection === 'mixed'
-      ? requestedDirection : user?.direction ?? 'forward',
+      ? requestedDirection : specialVerbs ? 'forward' : user?.direction ?? 'forward',
   );
   const [mode, setMode] = useState<InputMode>(user?.input_mode ?? 'typing');
   const requestedSelection = params.get('selection');
   const [selectionMode, setSelectionMode] = useState<SelectionMode>(
     requestedSelection === 'random' || requestedSelection === 'adaptive' || requestedSelection === 'scheduled' || requestedSelection === 'mistakes'
-      ? requestedSelection : user?.selection_mode ?? 'scheduled',
+      ? requestedSelection : specialVerbs ? 'scheduled' : user?.selection_mode ?? 'scheduled',
   );
   const [limit, setLimit] = useState(user?.daily_goal ?? 12);
   const [starting, setStarting] = useState(false);
@@ -155,7 +156,7 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
 
   return (
     <main className="page-wrap learn-setup">
-      <header className="page-header"><p className="section-kicker">{t('learn.newSession')}</p><h1>{t('learn.whatToday')}</h1><p>{t('learn.setupIntro')}</p></header>
+      <header className="page-header"><p className="section-kicker">{t(specialVerbs ? 'verbs.title' : 'learn.newSession')}</p><h1>{t('learn.whatToday')}</h1><p>{t('learn.setupIntro')}</p></header>
 
       <section className="setup-section panel">
         <div className="setup-heading"><span>1</span><div><h2>{t('learn.chooseDeckSection')}</h2><p>{t('learn.managedContent')}</p></div></div>
@@ -190,7 +191,7 @@ function Setup({ decks, start }: { decks: Deck[]; start(config: StartConfig): Pr
   );
 }
 
-function Study({ session, setSession, leave }: { session: StudySession; setSession(value: StudySession): void; leave(selection?: SelectionMode): void }) {
+function Study({ session, setSession, leave, specialVerbs }: { session: StudySession; setSession(value: StudySession): void; leave(selection?: SelectionMode): void; specialVerbs: boolean }) {
   const { number, t } = useI18n();
   const card = session.cards[0] ?? null;
   const [answer, setAnswer] = useState('');
@@ -301,7 +302,7 @@ function Study({ session, setSession, leave }: { session: StudySession; setSessi
 
   if (session.complete || !card) {
     const accuracy = session.reviewed ? Math.round((session.correct_reviewed / session.reviewed) * 100) : 0;
-    return <main className="study-shell"><section className="completion-card panel"><span className="completion-icon"><Sparkles /></span><p className="section-kicker">{t('learn.completed')}</p><h1>{t(session.selection_mode === 'mistakes' && session.total === 0 ? 'learn.noMistakes' : 'learn.wellDone')}</h1><p>{session.selection_mode === 'mistakes' && session.total === 0 ? t('learn.noMistakesText') : t('learn.completedText', { count: number(session.reviewed), source: session.section_titles?.join(', ') || session.section_title || session.deck_title })}</p><div className="completion-stats"><div><strong>{number(session.reviewed)}</strong><span>{t('learn.reviewed')}</span></div><div><strong>{number(accuracy)}%</strong><span>{t('learn.known')}</span></div></div><div className="completion-actions">{session.correct_reviewed < session.reviewed && <button className="button secondary" onClick={() => leave('mistakes')}><RotateCcw /> {t('learn.repeatMistakes')}</button>}<button className="button primary" onClick={() => leave()}>{t('learn.newSessionButton')}</button><Link className="button secondary" to="/">{t('learn.overview')}</Link></div></section></main>;
+    return <main className="study-shell"><section className="completion-card panel"><span className="completion-icon"><Sparkles /></span><p className="section-kicker">{t('learn.completed')}</p><h1>{t(session.selection_mode === 'mistakes' && session.total === 0 ? 'learn.noMistakes' : 'learn.wellDone')}</h1><p>{session.selection_mode === 'mistakes' && session.total === 0 ? t('learn.noMistakesText') : t('learn.completedText', { count: number(session.reviewed), source: session.section_titles?.join(', ') || session.section_title || session.deck_title })}</p><div className="completion-stats"><div><strong>{number(session.reviewed)}</strong><span>{t('learn.reviewed')}</span></div><div><strong>{number(accuracy)}%</strong><span>{t('learn.known')}</span></div></div><div className="completion-actions">{session.correct_reviewed < session.reviewed && <button className="button secondary" onClick={() => leave('mistakes')}><RotateCcw /> {t('learn.repeatMistakes')}</button>}<button className="button primary" onClick={() => leave()}>{t('learn.newSessionButton')}</button><Link className="button secondary" to={specialVerbs ? "/verben" : "/"}>{t('learn.overview')}</Link></div></section></main>;
   }
 
   const progress = session.total ? (session.reviewed / session.total) * 100 : 0;
@@ -334,13 +335,14 @@ function Study({ session, setSession, leave }: { session: StudySession; setSessi
   );
 }
 
-export function LearnPage() {
+export function LearnPage({ specialVerbs = false }: { specialVerbs?: boolean }) {
   const { t } = useI18n();
   const { user, updateUser } = useAuth();
   const [params, setParams] = useSearchParams();
   const [session, setSession] = useState<StudySession | null>(null);
   const [resumeError, setResumeError] = useState('');
-  const decks = useResource(() => api<Deck[]>('/decks'));
+  const decks = useResource(() => api<Deck[]>('/decks?kind=all'));
+  const availableDecks = decks.data?.filter((deck) => isSpecialVerbDeck(deck) === specialVerbs) ?? [];
   const sessionId = params.get('session');
 
   useEffect(() => {
@@ -360,7 +362,7 @@ export function LearnPage() {
 
   async function start(config: StartConfig) {
     const next = await api<StudySession>('/study-sessions', { method: 'POST', body: JSON.stringify(config) });
-    if (user) {
+    if (user && next.kind !== 'special_verbs' && !specialVerbs) {
       updateUser({
         ...user,
         selected_deck_id: config.deck_id,
@@ -389,9 +391,16 @@ export function LearnPage() {
 
   if (resumeError) return <PageError message={resumeError} retry={() => setParams({}, { replace: true })} />;
   if (sessionId && !session) return <PageLoading label={t('learn.sessionLoading')} />;
-  if (session) return <Study key={`${session.id}:${session.cards[0]?.item_id ?? "complete"}`} session={session} setSession={setSession} leave={leave} />;
+  if (session && (session.kind === 'special_verbs') !== specialVerbs) {
+    return <Navigate replace to={`${learnPath(session.kind === 'special_verbs')}?${params}`} />;
+  }
+  if (session) return <Study specialVerbs={specialVerbs} key={`${session.id}:${session.cards[0]?.item_id ?? "complete"}`} session={session} setSession={setSession} leave={leave} />;
   if (decks.loading) return <PageLoading label={t('common.decksLoading')} />;
   if (!decks.data) return <PageError message={decks.error} retry={() => void decks.reload()} />;
-  if (decks.data.length === 0) return <main className="page-wrap"><section className="empty-state panel"><Layers3 /><h2>{t('cards.noDeck')}</h2><p>{t('learn.emptyDecksText')}</p></section></main>;
-  return <Setup decks={decks.data} start={start} />;
+  const requestedDeck = decks.data.find((deck) => deck.id === params.get('deck'));
+  if (requestedDeck && isSpecialVerbDeck(requestedDeck) !== specialVerbs) {
+    return <Navigate replace to={`${learnPath(isSpecialVerbDeck(requestedDeck))}?${params}`} />;
+  }
+  if (availableDecks.length === 0) return <main className="page-wrap"><section className="empty-state panel"><Layers3 /><h2>{t(specialVerbs ? 'verbs.empty' : 'cards.noDeck')}</h2><p>{t(specialVerbs ? 'verbs.emptyHelp' : 'learn.emptyDecksText')}</p></section></main>;
+  return <Setup decks={availableDecks} start={start} specialVerbs={specialVerbs} />;
 }

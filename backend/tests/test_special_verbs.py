@@ -171,7 +171,8 @@ async def test_csv_import_and_both_directions_persist_isolated_progress():
                     denied = await learner.post(f'/api/v1/admin/special-verbs/{action}',
                                                 headers=_mutation_headers(learner), json=payload)
                     assert denied.status_code == 403
-                assert (await learner.get('/api/v1/decks')).json()[0]['id'] == deck['id']
+                available = await learner.get('/api/v1/decks?kind=special_verbs')
+                assert available.json()[0]['id'] == deck['id']
                 started = await learner.post('/api/v1/study-sessions',
                                              headers=_mutation_headers(learner), json={
                     'deck_id': deck['id'], 'direction': 'mixed', 'input_mode': 'reveal', 'limit': 3,

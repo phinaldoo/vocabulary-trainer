@@ -3,10 +3,12 @@ from __future__ import annotations
 import hashlib
 import json
 import uuid
+from typing import Literal
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.deck_kinds import PRINCIPAL_PARTS_MATCHER
 from app.errors import ApiError
 from app.models import Card, Deck, DeckVersion, Section
 from app.schemas import DeckManifest, DeckPublic, ImportResult
@@ -59,28 +61,31 @@ async def deck_public(db: AsyncSession, deck: Deck) -> DeckPublic:
     )
 
 
-async def published_decks(db: AsyncSession) -> list[Deck]:
-    return list(
-        (
-            await db.scalars(
-                select(Deck).where(Deck.status == "published").order_by(Deck.sort_order, Deck.title)
-            )
-        ).all()
-    )
+async def published_decks(
+    db: AsyncSession, kind: Literal["vocabulary", "special_verbs", "all"] = "vocabulary",
+) -> list[Deck]:
+    query = select(Deck).where(Deck.status == "published")
+    if kind == "vocabulary":
+        query = query.where(Deck.front_matcher != PRINCIPAL_PARTS_MATCHER)
+    elif kind == "special_verbs":
+        query = query.where(Deck.front_matcher == PRINCIPAL_PARTS_MATCHER)
+    return list((await db.scalars(query.order_by(Deck.sort_order, Deck.title))).all())
 
 
 async def resolve_published_deck(
-    db: AsyncSession, selected_deck_id: uuid.UUID | None
+    db: AsyncSession, selected_deck_id: uuid.UUID | None, *, vocabulary_only: bool = False,
 ) -> Deck | None:
+    query = select(Deck).where(Deck.status == "published")
+    if vocabulary_only:
+        query = query.where(Deck.front_matcher != PRINCIPAL_PARTS_MATCHER)
     if selected_deck_id:
-        selected = await db.scalar(
-            select(Deck).where(Deck.id == selected_deck_id, Deck.status == "published")
-        )
+        selected = await db.scalar(query.where(Deck.id == selected_deck_id))
         if selected:
             return selected
-    return await db.scalar(
-        select(Deck).where(Deck.status == "published").order_by(Deck.sort_order).limit(1)
-    )
+    # An implicit/default request must never switch ordinary learning to verbs.
+    return await db.scalar(query.where(
+        Deck.front_matcher != PRINCIPAL_PARTS_MATCHER,
+    ).order_by(Deck.sort_order).limit(1))
 
 
 def validate_manifest_answers(manifest: DeckManifest) -> None:

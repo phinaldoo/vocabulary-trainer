@@ -3,6 +3,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 from starlette.concurrency import run_in_threadpool
 
+from app.deck_kinds import PRINCIPAL_PARTS_MATCHER
 from app.dependencies import CurrentAuthWithCsrf, Database, SettingsDependency
 from app.errors import ApiError
 from app.models import Card, Deck, Section, StudySession, User, UserCardPreference, UserCardProgress
@@ -71,6 +72,7 @@ async def update_settings(
         deck = await db.scalar(
             select(Deck).where(
                 Deck.id == payload.selected_deck_id,
+                Deck.front_matcher != PRINCIPAL_PARTS_MATCHER,
                 Deck.status == "published",
             )
         )

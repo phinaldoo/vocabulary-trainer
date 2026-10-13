@@ -9,7 +9,7 @@ import {
   Settings,
   Sparkles,
 } from 'lucide-react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useSearchParams } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { Brand } from './Brand';
@@ -36,6 +36,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
   const { language, t } = useI18n();
   const location = useLocation();
+  const [params] = useSearchParams();
+  const verbQuery = params.get('deck') ? `?deck=${encodeURIComponent(params.get('deck')!)}` : '';
   if (!user) return null;
 
   return (
@@ -73,7 +75,15 @@ export function AppLayout({ children }: { children: ReactNode }) {
         </NavLink>
       </header>
 
-      <div className="app-content">{children}</div>
+      <div className="app-content">
+        {location.pathname.startsWith('/verben') && <nav className="verb-mode-nav" aria-label={t('verbs.title')}>
+          <NavLink to={`/verben${verbQuery}`} end>{t('verbs.title')}</NavLink>
+          <NavLink to={`/verben/lernen${verbQuery}`}>{t('nav.learn')}</NavLink>
+          <NavLink to={`/verben/vokabeln${verbQuery}`}>{t('cards.viewList')}</NavLink>
+          <NavLink to={`/verben/fortschritt${verbQuery}`}>{t('nav.progress')}</NavLink>
+        </nav>}
+        {children}
+      </div>
 
       <nav className="bottom-nav" aria-label={t('nav.mobile')}>
         {navigation.map(({ label, href, icon: Icon }) => {

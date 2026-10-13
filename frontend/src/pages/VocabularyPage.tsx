@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthContext';
 import { CardMetadata } from '../components/CardMetadata';
 import { PageError, PageLoading } from '../components/PageState';
 import { useModalDialog } from '../hooks/useModalDialog';
+import { decksPath, learnPath } from '../lib/learningMode';
 import { useI18n } from '../i18n';
 import type { MessageKey } from '../i18n/messages';
 import { metadataFields, metadataValue } from '../lib/vocabularyMetadata';
@@ -30,11 +31,11 @@ type SortKey = typeof sortKeys[number];
 const difficultyOptions: Difficulty[] = ['auto', 'easy', 'normal', 'hard'];
 const emptyPage: CardPage = { items: [], page: 1, page_size: 36, total: 0, pages: 1 };
 
-export function VocabularyPage() {
+export function VocabularyPage({ specialVerbs = false }: { specialVerbs?: boolean }) {
   const { user } = useAuth();
   const { number, t } = useI18n();
   const [params, setParams] = useSearchParams();
-  const decks = useResource(() => api<Deck[]>('/decks'));
+  const decks = useResource(() => api<Deck[]>(decksPath(specialVerbs)));
   const requestedDeck = params.get('deck');
   const fallbackDeckId = decks.data?.find((deck) => deck.id === user?.selected_deck_id)?.id ?? decks.data?.[0]?.id ?? '';
   const deckId = decks.data?.some((deck) => deck.id === requestedDeck) ? requestedDeck! : fallbackDeckId;
@@ -123,7 +124,7 @@ export function VocabularyPage() {
   if (!deck) return <main className="page-wrap"><section className="empty-state panel"><BookOpen /><h2>{t('cards.noDeck')}</h2><p>{t('cards.noDeckText')}</p></section></main>;
 
   return <main className="page-wrap vocabulary-page">
-    <header className="page-header"><p className="section-kicker">{t('cards.kicker')}</p><h1>{t('cards.title')}</h1><p>{t('cards.intro', { deck: deck.title, count: number(deck.card_count) })}</p></header>
+    <header className="page-header"><p className="section-kicker">{t('cards.kicker')}</p><h1>{t(specialVerbs ? 'verbs.title' : 'cards.title')}</h1><p>{t('cards.intro', { deck: deck.title, count: number(deck.card_count) })}</p></header>
     <section className="catalog-controls panel">
       <label className="search-field"><Search /><input value={query} onChange={(event) => updateParams({ q: event.target.value })} placeholder={t('cards.searchPlaceholder', { front: deck.front_label, back: deck.back_label })} aria-label={t('cards.searchLabel')} /></label>
       <div className="select-wrap"><select aria-label={t('cards.chooseDeck')} value={deck.id} onChange={(event) => { setSelected(null); updateParams({ deck: event.target.value, section: null }); }}>{decks.data.map((entry) => <option key={entry.id} value={entry.id}>{entry.title}</option>)}</select><ChevronDown /></div>
@@ -162,7 +163,7 @@ export function VocabularyPage() {
     {selected && <div className="dialog-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeDialog(); }}><section ref={dialogRef} tabIndex={-1} className="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="card-title">
       <button data-autofocus className="icon-button close" onClick={closeDialog} aria-label={t('common.close')}><X /></button><p className="section-kicker">{selected.section_title ?? deck.title}</p><h2 id="card-title" lang={deck.front_language}>{selected.front_text}</h2><p className="detail-translation" lang={deck.back_language}>{selected.back_text}</p><CardMetadata metadata={selected.metadata} />
       {difficultyControl(selected)}{actionError && <p className="form-error" role="alert">{actionError}</p>}
-      <div className="dialog-actions">{favoriteControl(selected)}<Link className="button primary" to={`/lernen?deck=${deck.id}${selected.section_id ? `&section=${selected.section_id}` : ''}`}><Sparkles /> {t('cards.studySection')}</Link></div>
+      <div className="dialog-actions">{favoriteControl(selected)}<Link className="button primary" to={`${learnPath(specialVerbs)}?deck=${deck.id}${selected.section_id ? `&section=${selected.section_id}` : ''}`}><Sparkles /> {t('cards.studySection')}</Link></div>
     </section></div>}
   </main>;
 }

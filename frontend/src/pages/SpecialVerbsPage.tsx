@@ -103,10 +103,10 @@ function VerbCollection({ deck }: { deck: Deck }) {
       </div>
       {sections.error && <PageError message={sections.error} retry={sections.reload} />}
       <div className="verb-practice-actions">
-        <Link className="button primary" to={`/lernen?${learn}&direction=forward`}>{t('verbs.forward')} <ArrowRight /></Link>
-        <Link className="button secondary" to={`/lernen?${learn}&direction=reverse`}>{t('verbs.reverse')} <ArrowRight /></Link>
-        <Link className="button secondary" to={`/lernen?${learn}&direction=mixed`}>{t('settings.mixed')}</Link>
-        <Link className="button subtle" to={`/vokabeln?deck=${deck.id}`}>{t('verbs.manageProgress')}</Link>
+        <Link className="button primary" to={`/verben/lernen?${learn}&direction=forward`}>{t('verbs.forward')} <ArrowRight /></Link>
+        <Link className="button secondary" to={`/verben/lernen?${learn}&direction=reverse`}>{t('verbs.reverse')} <ArrowRight /></Link>
+        <Link className="button secondary" to={`/verben/lernen?${learn}&direction=mixed`}>{t('settings.mixed')}</Link>
+        <Link className="button subtle" to={`/verben/vokabeln?deck=${deck.id}`}>{t('verbs.manageProgress')}</Link>
       </div>
       <p className="verb-hint">{t('verbs.practiceScope')}</p>
     </div>
@@ -122,12 +122,12 @@ export function SpecialVerbsPage() {
   const { t } = useI18n();
   const { user } = useAuth();
   const [params, setParams] = useSearchParams();
-  const decks = useResource(() => api<Deck[]>('/decks'));
+  const decks = useResource(() => api<Deck[]>('/decks?kind=special_verbs'));
   const collections = decks.data?.filter((deck) => deck.front_matcher === matcher) ?? [];
   const selected = collections.find((deck) => deck.id === params.get('deck')) ?? collections[0];
 
   return <main className="page-wrap special-verbs-page">
-    <header className="page-header"><p className="section-kicker">{t('verbs.kicker')}</p><h1>{t('verbs.title')}</h1><p>{t('verbs.intro')}</p></header>
+    <header className="page-header"><p className="section-kicker">{t('verbs.kicker')}</p><h1>{t('verbs.title')}</h1><p>{t('verbs.intro')}</p><p>{t('verbs.independent')}</p></header>
     {user?.role === 'admin' ? <CsvImport onImported={(deck) => { decks.reload(); setParams({ deck: deck.id }, { replace: true }); }} /> : <p className="verb-hint">{t('verbs.adminOnly')}</p>}
     {decks.loading ? <PageLoading label={t('common.decksLoading')} /> : decks.error ? <PageError message={decks.error} retry={decks.reload} /> : !selected ? <section className="empty-state panel"><Sparkles /><h2>{t('verbs.empty')}</h2><p>{t('verbs.emptyHelp')}</p></section> : <>
       <label className="deck-select"><span>{t('common.deck')}</span><div className="select-wrap"><select value={selected.id} onChange={(event) => setParams({ deck: event.target.value })}>{collections.map((deck) => <option key={deck.id} value={deck.id}>{deck.title}</option>)}</select></div></label>

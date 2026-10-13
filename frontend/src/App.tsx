@@ -41,10 +41,13 @@ export function App() {
       <Route path="/anmelden" element={<AuthPage />} />
       <Route path="/registrieren" element={<AuthPage register />} />
       <Route path="/" element={<Protected><DashboardPage /></Protected>} />
-      <Route path="/lernen" element={<Protected><LearnPage /></Protected>} />
-      <Route path="/vokabeln" element={<Protected><VocabularyPage /></Protected>} />
+      <Route path="/lernen" element={<Protected><LearnPage key="vocabulary" /></Protected>} />
+      <Route path="/vokabeln" element={<Protected><VocabularyPage key="vocabulary" /></Protected>} />
       <Route path="/verben" element={<Protected><SpecialVerbsPage /></Protected>} />
-      <Route path="/fortschritt" element={<Protected><ProgressPage /></Protected>} />
+      <Route path="/verben/lernen" element={<Protected><LearnPage key="special-verbs" specialVerbs /></Protected>} />
+      <Route path="/verben/vokabeln" element={<Protected><VocabularyPage key="special-verbs" specialVerbs /></Protected>} />
+      <Route path="/verben/fortschritt" element={<Protected><ProgressPage key="special-verbs" specialVerbs /></Protected>} />
+      <Route path="/fortschritt" element={<Protected><ProgressPage key="vocabulary" /></Protected>} />
       <Route path="/einstellungen" element={<Protected><SettingsPage /></Protected>} />
       <Route path="/admin" element={<Protected><AdminPage /></Protected>} />
       <Route path="*" element={<Navigate to="/" replace />} />
