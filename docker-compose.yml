@@ -15,7 +15,7 @@ x-backend-environment: &backend-environment
 
 services:
   db:
-    image: postgres:17.6-alpine3.22
+    image: postgres:18.4-alpine3.22
     environment:
       POSTGRES_DB: vocabulary_trainer
       POSTGRES_USER: vocabulary_trainer
